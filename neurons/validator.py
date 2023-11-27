@@ -42,7 +42,7 @@ from tabulate import tabulate
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the absolute path
-ttv = os.path.abspath(os.path.join(current_script_dir, "ttvMain"))
+ttv = os.path.abspath(os.path.join(current_script_dir, "AudioSubnet"))
 
 # Check if the path is already in sys.path
 if ttv not in sys.path:
