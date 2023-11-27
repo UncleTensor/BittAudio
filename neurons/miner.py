@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# (developer): ETG development team
+# Copyright © 2023 <ETG>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -27,9 +27,26 @@ import argparse
 import typing
 import traceback
 import bittensor as bt
+import sys
+# Adjust the path to include the directory where 'template' is located
+# Get the directory of the current script
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the absolute path
+ttv = os.path.abspath(os.path.join(current_script_dir, "ttvMain"))
+
+# Check if the path is already in sys.path
+if ttv not in sys.path:
+    # Insert it at the beginning of the sys.path list
+    sys.path.insert(0, ttv)
 
 # import this repo
 import template
+from models.text_to_speech_models import TextToSpeechModels
+from models.text_to_speech_models import SunoBark
+# from models.text_to_speech_models import EnglishTextToSpeech
+
+
 
 
 def get_config():
@@ -40,6 +57,9 @@ def get_config():
     # TODO(developer): Adds your custom miner arguments to the parser.
     parser.add_argument(
         "--custom", default="my_custom_value", help="Adds a custom value to the parser."
+    )
+    parser.add_argument(
+        "--model", default='microsoft/speecht5_tts', help="The model to use for text-to-speech." # suno/bark-small
     )
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
@@ -83,6 +103,32 @@ def main(config):
     # This logs the active configuration to the specified logging directory for review.
     bt.logging.info(config)
 
+        # Activating Bittensor's logging with the set configurations.
+    bt.logging(config=config, logging_dir=config.full_path)
+    bt.logging.info(
+        f"Running miner for subnet: {config.netuid} on network: {config.subtensor.chain_endpoint} with config:"
+    )
+
+    # This logs the active configuration to the specified logging directory for review.
+    bt.logging.info(config)
+
+    # Check the supplied model and log the appropriate information.
+    if config.model == "microsoft/speecht5_tts":
+        bt.logging.info("Using the TextToSpeechModels with the supplied model: microsoft/speecht5_tts")
+        tts_models = TextToSpeechModels()
+    # elif config.model == "facebook/mms-tts-eng":
+    #     bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
+    #     tts_models = EnglishTextToSpeech()
+    elif config.model == "suno/bark-small":
+        bt.logging.info("Using the SunoBark with the supplied model: suno/bark-small")
+        tts_models = SunoBark()
+    elif config.model is None:
+        bt.logging.error("Model name was not supplied. Exiting the program.")
+        exit(1)
+    else:
+        bt.logging.error(f"Wrong model was supplied: {config.model}. Exiting the program.")
+        exit(1)
+
     # Step 4: Initialize Bittensor miner objects
     # These classes are vital to interact and function within the Bittensor network.
     bt.logging.info("Setting up bittensor objects.")
@@ -112,7 +158,7 @@ def main(config):
     # Step 5: Set up miner functionalities
     # The following functions control the miner's response to incoming requests.
     # The blacklist function decides if a request should be ignored.
-    def blacklist_fn(synapse: template.protocol.Dummy) -> typing.Tuple[bool, str]:
+    def speech_blacklist_fn(synapse: template.protocol.TextToSpeech) -> typing.Tuple[bool, str]:
         # TODO(developer): Define how miners should blacklist requests. This Function
         # Runs before the synapse data has been deserialized (i.e. before synapse.data is available).
         # The synapse is instead contructed via the headers of the request. It is important to blacklist
@@ -136,7 +182,7 @@ def main(config):
 
     # The priority function determines the order in which requests are handled.
     # More valuable or higher-priority requests are processed before others.
-    def priority_fn(synapse: template.protocol.Dummy) -> float:
+    def speech_priority_fn(synapse: template.protocol.TextToSpeech) -> float:
         # TODO(developer): Define how miners should prioritize requests.
         # Miners may recieve messages from multiple entities at once. This function
         # determines which request should be processed first. Higher values indicate
@@ -151,15 +197,29 @@ def main(config):
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
         )
         return prirority
+    
+
+    
+    
 
     # This is the core miner function, which decides the miner's response to a valid, high-priority request.
-    def dummy(synapse: template.protocol.Dummy) -> template.protocol.Dummy:
-        # TODO(developer): Define how miners should process requests.
-        # This function runs after the synapse has been deserialized (i.e. after synapse.data is available).
-        # This function runs after the blacklist and priority functions have been called.
-        # Below: simple template logic: return the input value multiplied by 2.
-        # If you change this, your miner will lose emission in the network incentive landscape.
-        synapse.dummy_output = synapse.dummy_input * 2
+    def ProcessSpeech(synapse: template.protocol.TextToSpeech) -> template.protocol.TextToSpeech:
+        bt.logging.debug("In prompt!")
+        # print(synapse.text_input)
+        
+        # Here we use the models class to generate the speech
+        speech = tts_models.generate_speech(synapse.text_input)
+
+        # Check if 'speech' contains valid audio data
+        # bt.logging.debug(f"Generated speech tensor  ===============================================================================================================================================================: {speech}")
+
+
+        # Assign 'speech' to 'speech_output'
+        synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list
+        # bt.logging.debug(f"Assigned speech output  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: {synapse.speech_output}") # @isharab
+
+        # Check 'synapse' before returning it
+        # print("SYNAPSE:", synapse)
         return synapse
 
     # Step 6: Build and link miner functions to the axon.
@@ -170,15 +230,15 @@ def main(config):
     # Attach determiners which functions are called when servicing a request.
     bt.logging.info(f"Attaching forward function to axon.")
     axon.attach(
-        forward_fn=dummy,
-        blacklist_fn=blacklist_fn,
-        priority_fn=priority_fn,
+        forward_fn=ProcessSpeech,
+        blacklist_fn=speech_blacklist_fn,
+        priority_fn=speech_priority_fn,
     )
 
     # Serve passes the axon information to the network + netuid we are hosting on.
     # This will auto-update if the axon port of external ip have changed.
     bt.logging.info(
-        f"Serving axon {dummy} on network: {config.subtensor.chain_endpoint} with netuid: {config.netuid}"
+        f"Serving axon {ProcessSpeech} on network: {config.subtensor.chain_endpoint} with netuid: {config.netuid}"
     )
     axon.serve(netuid=config.netuid, subtensor=subtensor)
 
@@ -199,11 +259,11 @@ def main(config):
                 log = (
                     f"Step:{step} | "
                     f"Block:{metagraph.block.item()} | "
-                    f"Stake:{metagraph.S[my_subnet_uid]} | "
-                    f"Rank:{metagraph.R[my_subnet_uid]} | "
+                    f"Stake:{metagraph.S[my_subnet_uid]:.6f} | "
+                    f"Rank:{metagraph.R[my_subnet_uid]:.6f} | "
                     f"Trust:{metagraph.T[my_subnet_uid]} | "
-                    f"Consensus:{metagraph.C[my_subnet_uid] } | "
-                    f"Incentive:{metagraph.I[my_subnet_uid]} | "
+                    f"Consensus:{metagraph.C[my_subnet_uid]:.6f} | "
+                    f"Incentive:{metagraph.I[my_subnet_uid]:.6f} | "
                     f"Emission:{metagraph.E[my_subnet_uid]}"
                 )
                 bt.logging.info(log)
@@ -222,5 +282,7 @@ def main(config):
 
 
 # This is the main function, which runs the miner.
+# Entry point for the script
 if __name__ == "__main__":
-    main(get_config())
+    config = get_config()
+    main(config)

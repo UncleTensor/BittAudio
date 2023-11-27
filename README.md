@@ -1,106 +1,134 @@
-<div align="center">
+# Audio Generation Subnetwork
 
-# **Bittensor Subnet Template** <!-- omit in toc -->
-[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+This subnetwork is a decentralized system designed for text-to-audio applications within the Bittensor network. It consists of a Validator and a Miner working collaboratively to generate high-quality audio from provided prompts. 
+In the first phase, we will start with text-to-speech (TTS), working in parallel to add music generation in the upcoming updates. 
 
----
+## Validator
 
-## The Incentivized Internet <!-- omit in toc -->
+The Validator is responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validator evaluates the quality of the generated audio produced by the Miners and rewards them based on the perceived quality.
 
-[Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
-</div>
+## Miner
 
----
-- [Quickstarter template](#quickstarter-template)
-- [Introduction](#introduction)
-  - [Example](#example)
-- [Installation](#installation)
-  - [Before you proceed](#before-you-proceed)
-  - [Install](#install)
-- [Writing your own incentive mechanism](#writing-your-own-incentive-mechanism)
-- [License](#license)
+Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validator. Starting with the leverage of advanced text-to-speech models, Miners aim to produce high-fidelity and natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the rewards received from the Validator.
 
----
-## Quickstarter template
+## Workflow
 
-This template contains all the required installation instructions, scripts, and files and functions for:
-- Building Bittensor subnets.
-- Creating custom incentive mechanisms and running these mechanisms on the subnets. 
+1. **Prompt Generation:** The Validator generates prompts and distributes them to the Miners on the network.
 
----
+2. **Text-to-Speech Processing:** Miners receive the prompts and utilize text-to-speech models to convert the text into voice audio.
 
-## Introduction
+3. **Quality Evaluation:** The Validator assesses the quality of the generated audio, considering factors such as clarity, naturalness, and adherence to the prompt.
 
-**IMPORTANT**: If you are new to Bittensor subnets, read this section before proceeding to [Installation](#installation) section. 
+4. **Reward Distribution:** Based on the quality assessment, the Validator rewards Miners accordingly. Miners with consistently higher-quality outputs receive a larger share of rewards.
 
-The Bittensor blockchain hosts multiple self-contained incentive mechanisms called **subnets**. Subnets are playing fields in which:
-- Subnet miners who produce value, and
-- Subnet validators who produce consensus
+## Benefits
 
-determine together the proper distribution of TAO for the purpose of incentivizing the creation of value, i.e., generating digital commodities, such as intelligence or data. 
+- **Decentralized Text-to-Speech:** The subnetwork decentralizes the TTS process, distributing the workload among participating Miners.
+  
+- **Quality Incentives:** The incentive mechanism encourages Miners to continually improve the quality of their generated voice audio.
 
-Each subnet consists of:
-- Subnet miners and subnet validators.
-- A protocol using which the subnet miners and subnet validators interact with one another. This protocol is part of the incentive mechanism.
-- The Bittensor API using which the subnet miners and subnet validators interact with Bittensor's onchain consensus engine [Yuma Consensus](https://bittensor.com/documentation/validating/yuma-consensus). The Yuma Consensus is designed to drive these actors: subnet validators and subnet miners, into agreement on who is creating value and what that value is worth. 
+- **Bittensor Network Integration:** Leveraging the Bittensor network ensures secure and transparent interactions between Validators and Miners.
 
-This starter template is split into three primary files. To write your own incentive mechanism, you should edit these files. These files are:
-1. `template/protocol.py`: Contains the definition of the protocol used by subnet miners and subnet validators.
-2. `neurons/miner.py`: Script that defines the subnet miner's behavior, i.e., how the subnet miner responds to requests from subnet validators.
-3. `neurons/validator.py`: This script defines the subnet validator's behavior, i.e., how the subnet validator requests information from the subnet miners and determines the scores.
+Join the Text-to-Voice Subnetwork and contribute to the advancement of decentralized text-to-speech technologies within the Bittensor ecosystem.
 
-### Example
-
-The Bittensor Subnet 1 for Text Prompting is built using this template. See [Bittensor Text-Prompting](https://github.com/opentensor/text-prompting) for how to configure the files and how to add monitoring and telemetry and support multiple miner types. Also see this Subnet 1 in action on [Taostats](https://taostats.io/subnets/netuid-1/) explorer.
-
----
 
 ## Installation
-
-### Before you proceed
-Before you proceed with the installation of the subnet, note the following: 
-
-- Use these instructions to run your subnet locally for your development and testing, or on Bittensor testnet or on Bittensor mainnet. 
-- **IMPORTANT**: We **strongly recommend** that you first run your subnet locally and complete your development and testing before running the subnet on Bittensor testnet. Furthermore, make sure that you next run your subnet on Bittensor testnet before running it on the Bittensor mainnet.
-- You can run your subnet either as a subnet owner, or as a subnet validator or as a subnet miner. 
-- **IMPORTANT:** Make sure you are aware of the minimum compute requirements for your subnet. See the [Minimum compute YAML configuration](./min_compute.yml).
-- Note that installation instructions differ based on your situation: For example, installing for local development and testing will require a few additional steps compared to installing for testnet. Similarly, installation instructions differ for a subnet owner vs a validator or a miner. 
-
-### Install
-
-- **Running locally**: Follow the step-by-step instructions described in this section: [Running Subnet Locally](./docs/running_on_staging.md).
-- **Running on Bittensor testnet**: Follow the step-by-step instructions described in this section: [Running on the Test Network](./docs/running_on_testnet.md).
-- **Running on Bittensor mainnet**: Follow the step-by-step instructions described in this section: [Running on the Main Network](./docs/running_on_mainnet.md).
-
----
-
-## Writing your own incentive mechanism
-
-As described in [Quickstarter template](#quickstarter-template) section above, when you are ready to write your own incentive mechanism, update this template repository by editing the following files. The code in these files contains detailed documentation on how to update the template. Read the documentation in each of the files to understand how to update the template. There are multiple **TODO**s in each of the files identifying sections you should update. These files are:
-- `template/protocol.py`: Contains the definition of the wire-protocol used by miners and validators.
-- `neurons/miner.py`: Script that defines the miner's behavior, i.e., how the miner responds to requests from validators.
-- `neurons/validator.py`: This script defines the validator's behavior, i.e., how the validator requests information from the miners and determines the scores.
-
----
-
-## License
-This repository is licensed under the MIT License.
-```text
-# The MIT License (MIT)
-# Copyright © 2023 Yuma Rao
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-# documentation files (the “Software”), to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
-# and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all copies or substantial portions of
-# the Software.
-
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-# THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
+```bash
+cd 
+git clone https://github.com/isharab/ttvMain.git
+cd ttvMain 
+pip install -e . 
 ```
+
+**Evaluation Mechanism:**
+The evaluation mechanism involves the validator querying miners on the network with random prompts, receiving text-to-speech responses, scoring them based on correctness, and updating weights on the Bittensor blockchain. The scoring is done using a reward function from the `template` module.
+
+**Miner/Validator Hardware Specs:**
+The hardware requirements for miners and validators depend on the complexity and resource demands of the chosen text-to-speech models. Typically, a machine with a decent CPU, GPU, sufficient VRAM, and RAM is required. Disk space requirements would depend on the size of the models and any additional data.
+
+**How to Run a Validator:**
+To run a validator, execute the `validator.py` script with the necessary command-line arguments. The script sets up Bittensor objects, connects to the network, queries miners, scores responses, and updates weights.
+
+**How to Run a Miner:**
+To run a miner, execute the `miner.py` script with the required configuration. The miner initializes Bittensor objects, connects to the network, and processes incoming text-to-speech requests.
+
+**Text-to-Speech Models Supported:**
+The code references two text-to-speech models: `TextToSpeechModels` and `SunoBark`. The specific requirements for each model in terms of CPU, GPU VRAM, RAM, and disk space are not explicitly provided in the shared code. To determine these requirements, you may need to refer to the documentation or implementation details of these models.
+
+In general, text-to-speech models can vary in their resource demands. Larger models may require more powerful GPUs and additional system resources. It's recommended to check the documentation or model repository for specific model requirements. If GPU acceleration is utilized, a compatible GPU with sufficient VRAM is often beneficial for faster processing.
+
+Certainly! Below are instructions for using the arguments in `miner.py` and `validator.py`:
+
+### Instructions for `miner.py`:
+
+## Mining 
+```bash
+python3.9 neurons/miner.py --netuid <your_subnet_uid> --wallet.name <your_wallet_name> --wallet.hotkey default --logging.debug --model <your_model_name>
+```
+Certainly! Here's the information formatted as a table for README.md:
+
+### Bittensor Miner Script Arguments:
+
+| **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
+|---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **Configuration Arguments**     | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
+|                                 | `--model`                            | 'microsoft/speecht5_tts'   | The model to use for text-to-speech.                                                                                 |
+|                                 | `--netuid`                           | 1                          | The chain subnet UID.                                                                                                 |
+| **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
+|                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
+| **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
+|                                 | `--logging.trace`                    | -                          | Enable trace logs.                                                                                                   |
+|                                 | `--logging.logging_dir`              | -                          | Directory for logging.                                                                                               |
+| **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
+|                                 | `--wallet.hotkey`                    | "default"                  | Hotkey path for the wallet.                                                                                          |
+|                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
+| **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.                                                                                    |
+
+### Main Function Flow:
+
+1. Set up logging.
+2. Check the supplied model and log appropriate information.
+3. Initialize Bittensor miner objects (wallet, subtensor, metagraph).
+4. Set up miner functionalities (blacklist, priority, main processing function).
+5. Build and link miner functions to the axon.
+6. Serve the axon on the network with specified netuid.
+7. Start the axon server.
+8. Keep the miner alive in a loop, periodically updating network knowledge.
+9. Handle interruptions and errors gracefully.
+
+
+## Validating  
+```bash
+python3.9 neurons/validator.py --netuid <your_subnet_uid> --wallet.name <your_validator_wallet_name> --wallet.hotkey default --logging.debug --hub_key <huggingface_access_key>
+```
+Certainly! Here's the information formatted as a table for README.md:
+
+### Bittensor Validator Script Arguments:
+
+| **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
+|---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **Configuration Arguments**     | `--alpha`                            | 0.9                        | The weight moving average scoring.                                                                                    |
+|                                 | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
+|                                 | `--netuid`                           | 1                          | The chain subnet UID.                                                                                                 |
+|                                 | `--hub_key`                          | None                       | Supply the Huggingface Hub API key for the prompt dataset.                                                            |
+|                                 | `--threshold`                        | 0.68                       | The threshold for response scoring.                                                                                   |
+| **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
+|                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
+| **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
+|                                 | `--logging.trace`                    | -                          | Enable trace logs.                                                                                                   |
+|                                 | `--logging.logging_dir`              | -                          | Directory for logging.                                                                                               |
+| **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
+|                                 | `--wallet.hotkey`                    | "default"                  | Hotkey path for the wallet.                                                                                          |
+|                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
+
+### Main Function Flow:
+
+1. Set up logging.
+2. Build Bittensor validator objects (wallet, subtensor, dendrite, metagraph).
+3. Connect the validator to the network.
+4. Set up initial scoring weights for validation.
+5. Start the main validation loop.
+6. Query miners on the network.
+7. Score responses and update weights.
+8. Periodically update weights on the Bittensor blockchain.
+9. Handle errors and interruptions gracefully.

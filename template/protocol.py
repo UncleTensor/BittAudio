@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# (developer): ETG development team
+# Copyright © 2023 ETG
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -17,7 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import typing
+from typing import Optional, List
 import bittensor as bt
 
 # TODO(developer): Rewrite with your protocol definition.
@@ -40,37 +40,174 @@ import bittensor as bt
 #   assert dummy_output == 2
 
 
-class Dummy(bt.Synapse):
-    """
-    A simple dummy protocol representation which uses bt.Synapse as its base.
-    This protocol helps in handling dummy request and response communication between
-    the miner and the validator.
+# class Dummy(bt.Synapse):
+#     """
+#     A simple dummy protocol representation which uses bt.Synapse as its base.
+#     This protocol helps in handling dummy request and response communication between
+#     the miner and the validator.
 
-    Attributes:
-    - dummy_input: An integer value representing the input request sent by the validator.
-    - dummy_output: An optional integer value which, when filled, represents the response from the miner.
-    """
+#     Attributes:
+#     - dummy_input: An integer value representing the input request sent by the validator.
+#     - dummy_output: An optional integer value which, when filled, represents the response from the miner.
+#     """
 
+#     # Required request input, filled by sending dendrite caller.
+#     dummy_input: int
+
+#     # Optional request output, filled by recieving axon.
+#     dummy_output: typing.Optional[int] = None
+
+#     def deserialize(self) -> int:
+#         """
+#         Deserialize the dummy output. This method retrieves the response from
+#         the miner in the form of dummy_output, deserializes it and returns it
+#         as the output of the dendrite.query() call.
+
+#         Returns:
+#         - int: The deserialized response, which in this case is the value of dummy_output.
+
+#         Example:
+#         Assuming a Dummy instance has a dummy_output value of 5:
+#         >>> dummy_instance = Dummy(dummy_input=4)
+#         >>> dummy_instance.dummy_output = 5
+#         >>> dummy_instance.deserialize()
+#         5
+#         """
+#         return self.dummy_output
+
+# class Dummy(bt.Synapse):
+#     """
+#     A simple dummy protocol representation which uses bt.Synapse as its base.
+#     This protocol helps in handling dummy request and response communication between
+#     the miner and the validator.
+
+#     Attributes:
+#     - dummy_input: An integer value representing the input request sent by the validator.
+#     - dummy_output: An optional integer value which, when filled, represents the response from the miner.
+#     """
+
+#     # Required request input, filled by sending dendrite caller.
+#     dummy_input: int
+
+#     # Optional request output, filled by recieving axon.
+#     dummy_output: typing.Optional[int] = None
+
+#     def deserialize(self) -> int:
+#         """
+#         Deserialize the dummy output. This method retrieves the response from
+#         the miner in the form of dummy_output, deserializes it and returns it
+#         as the output of the dendrite.query() call.
+
+#         Returns:
+#         - int: The deserialized response, which in this case is the value of dummy_output.
+
+#         Example:
+#         Assuming a Dummy instance has a dummy_output value of 5:
+#         >>> dummy_instance = Dummy(dummy_input=4)
+#         >>> dummy_instance.dummy_output = 5
+#         >>> dummy_instance.deserialize()
+#         5
+#         """
+#         return self.dummy_output
+
+
+
+
+
+class TextToSpeech(bt.Synapse):
+    """
+    TextToSpeech class inherits from bt.Synapse.
+    It is used to convert text to speech.
+    """
     # Required request input, filled by sending dendrite caller.
-    dummy_input: int
+    text_input: Optional[str] = None
 
-    # Optional request output, filled by recieving axon.
-    dummy_output: typing.Optional[int] = None
+    # Here we define speech_output as an Optional PyTorch tensor instead of bytes.
+    speech_output: Optional[List] = None
 
-    def deserialize(self) -> int:
+    completion: str = None
+
+
+    def deserialize(self) -> List:
         """
-        Deserialize the dummy output. This method retrieves the response from
-        the miner in the form of dummy_output, deserializes it and returns it
-        as the output of the dendrite.query() call.
-
-        Returns:
-        - int: The deserialized response, which in this case is the value of dummy_output.
-
-        Example:
-        Assuming a Dummy instance has a dummy_output value of 5:
-        >>> dummy_instance = Dummy(dummy_input=4)
-        >>> dummy_instance.dummy_output = 5
-        >>> dummy_instance.deserialize()
-        5
+        Deserialize the speech_output into a PyTorch tensor.
         """
-        return self.dummy_output
+        # If speech_output is a tensor, just return it
+        # if isinstance(self.speech_output, List):
+          # print(" Deserialize the speech_output into a PyTorch tensor.",self)
+        return self
+        # raise TypeError("speech_output is not a tensor")
+
+
+class SpeechToText(bt.Synapse):
+    """
+    SpeechToText class inherits from bt.Synapse.
+    It is used to convert speech to text.
+    """
+    # Required request input, filled by sending dendrite caller.
+    speech_input: Optional[List] = None
+
+    # Here we define text_output as an Optional PyTorch tensor instead of bytes.
+    text_output: Optional[str] = None
+
+    completion: str = None
+
+
+    def deserialize(self) -> str:
+        """
+        Deserialize the text_output into a PyTorch tensor.
+        """
+        # If text_output is a tensor, just return it
+        if isinstance(self.text_output, str):
+          print(" Deserialize the text_output into a PyTorch tensor.",self)
+          return self
+        raise TypeError("text_output is not a tensor")
+    
+
+class TextToMusic(bt.Synapse):
+    """
+    TextToMusic class inherits from bt.Synapse.
+    It is used to convert text to music.
+    """
+    # Required request input, filled by sending dendrite caller.
+    text_input: Optional[str] = None
+
+    # Here we define music_output as an Optional PyTorch tensor instead of bytes.
+    music_output: Optional[List] = None
+
+    completion: str = None
+
+
+    def deserialize(self) -> List:
+        """
+        Deserialize the music_output into a PyTorch tensor.
+        """
+        # If music_output is a tensor, just return it
+        if isinstance(self.music_output, List):
+          print(" Deserialize the music_output into a PyTorch tensor.",self)
+          return self
+        raise TypeError("music_output is not a tensor")
+    
+class TextToSound(bt.Synapse):
+    """
+    TextToSound class inherits from bt.Synapse.
+    It is used to convert text to sound.
+    """
+    # Required request input, filled by sending dendrite caller.
+    text_input: Optional[str] = None
+
+    # Here we define sound_output as an Optional PyTorch tensor instead of bytes.
+    sound_output: Optional[List] = None
+
+    completion: str = None
+
+
+    def deserialize(self) -> List:
+        """
+        Deserialize the sound_output into a PyTorch tensor.
+        """
+        # If sound_output is a tensor, just return it
+        if isinstance(self.sound_output, List):
+          print(" Deserialize the sound_output into a PyTorch tensor.",self)
+          return self
+        raise TypeError("sound_output is not a tensor")

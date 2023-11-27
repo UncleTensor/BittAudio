@@ -27,10 +27,58 @@ import torch
 import argparse
 import traceback
 import bittensor as bt
+from scipy.io import wavfile
+import asyncio
+from datasets import load_dataset
+import random
+import csv
+import sys
+import numpy as np
+import pandas as pd
+from tabulate import tabulate
 
+# Adjust the path to include the directory where 'template' is located
+# Get the directory of the current script
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the absolute path
+ttv = os.path.abspath(os.path.join(current_script_dir, "ttvMain"))
+
+# Check if the path is already in sys.path
+if ttv not in sys.path:
+    # Insert it at the beginning of the sys.path list
+    sys.path.insert(0, ttv)
 # import this repo
 import template
+# Set the sampling rate (you can adjust this as needed)
+sampling_rate = 16000  # 16 kHz is a common choice
 
+# Define a threshold value (you can adjust this as needed)
+threshold = 0.8
+
+
+example_prompts = [
+    "Please read me a bedtime story.",
+    "Translate the following sentence into French: 'Hello, how are you?'",
+    "Generate an audio file for the poem 'The Road Not Taken' by Robert Frost.",
+    "Convert the following news article into speech: [Paste the article here]."
+    "Read the weather forecast for tomorrow.",
+    "Narrate a description of your favorite book.",
+    "Create an audio version of the user manual for a smartphone.",
+    "Generate speech for a conversation between two characters in a novel.",
+    "Read aloud the recipe for chocolate chip cookies.",
+    "Translate 'Thank you' into multiple languages and speak them.",
+    "Summarize the latest science news article in under 3 minutes.",
+    "Generate an audiobook for the first chapter of 'Pride and Prejudice.'",
+    "Read me a famous speech, like Martin Luther King Jr.'s 'I Have a Dream.'",
+    "Convert a Wikipedia article about space exploration into an audio.",
+    "Speak the lyrics of a popular song.",
+    "Narrate a travelogue for a trip to a tropical island.",
+    "Create an audio guide for a historical monument or landmark.",
+    "Read a humorous short story.",
+    "Translate and narrate a short phrase in Morse code.",
+    "Generate speech for a fictional character's monologue."
+]
 
 # Step 2: Set up the configuration parser
 # This function is responsible for setting up and parsing command-line arguments.
@@ -45,6 +93,8 @@ def get_config():
     )
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
+    # Supply Huggingface hub API key --hub_key default is None
+    parser.add_argument("--hub_key", type=str, default=None, help="Supply the Huggingface Hub API key for prompt dataset")
     # Adds subtensor specific arguments i.e. --subtensor.chain_endpoint ... --subtensor.network ...
     bt.subtensor.add_args(parser)
     # Adds logging specific arguments i.e. --logging.debug ..., --logging.trace .. or --logging.logging_dir ...
@@ -54,7 +104,10 @@ def get_config():
     # Parse the config (will take command-line arguments if provided)
     # To print help message, run python3 template/validator.py --help
     config = bt.config(parser)
-
+    # Add argument for the threshold
+    parser.add_argument(
+        "--threshold", default=0.68, type=float, help="The threshold for response scoring."
+    )
     # Step 3: Set up logging directory
     # Logging is crucial for monitoring and debugging purposes.
     config.full_path = os.path.expanduser(
@@ -86,6 +139,14 @@ def main(config):
     # Step 4: Build Bittensor validator objects
     # These are core Bittensor classes to interact with the network.
     bt.logging.info("Setting up bittensor objects.")
+
+    if config.hub_key:
+        # Load the dataset from Hugging Face using the API key
+        gs_dev = load_dataset("speechcolab/gigaspeech", "dev", use_auth_token=config.hub_key)
+        prompts = gs_dev['validation']['text']
+    else:
+        # Use the example prompts if no API key is provided
+        prompts = example_prompts
 
     # The wallet holds the cryptographic key pairs for the validator.
     wallet = bt.wallet(config=config)
@@ -121,35 +182,65 @@ def main(config):
     # Step 7: The Main Validation Loop
     bt.logging.info("Starting validator loop.")
     step = 0
+    d = bt.dendrite()
     while True:
         try:
             # TODO(developer): Define how the validator selects a miner to query, how often, etc.
             # Broadcast a query to all miners on the network.
+            random_prompt = random.choice(prompts)
             responses = dendrite.query(
-                # Send the query to all miners in the network.
                 metagraph.axons,
-                # Construct a dummy query.
-                template.protocol.Dummy(dummy_input=step),  # Construct a dummy query.
-                # All responses have the deserialize function called on them before returning.
+                template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
                 deserialize=True,
+                timeout=120,
             )
-
-            # Log the results for monitoring purposes.
-            bt.logging.info(f"Received dummy responses: {responses}")
 
             # TODO(developer): Define how the validator scores responses.
             # Adjust the scores based on responses from miners.
-            for i, resp_i in enumerate(responses):
-                # Check if the miner has provided the correct response by doubling the dummy input.
-                # If correct, set their score for this round to 1. Otherwise, set it to 0.
-                score = template.reward.dummy(step, resp_i)
+            for i, resp_i in enumerate(responses[:-1]): # @isharab [:-1]
+                if isinstance(resp_i, template.protocol.TextToSpeech):
+                    #The response has been deserialized into the expected class
+                    # Now you can access its properties
+                    text_input = resp_i.text_input
 
-                # Update the global score of the miner.
-                # This score contributes to the miner's weight in the network.
-                # A higher weight means that the miner has been consistently responding correctly.
-                scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                    # Check if speech_output is not None before processing
+                    speech_output = resp_i.speech_output
+                    if speech_output is not None:
+                        try:
+                            # Ensure audio_tensor is of correct type and range
+                            audio_tensor = torch.tensor(speech_output, dtype=torch.float32).numpy()
+                            audio_tensor = np.clip(audio_tensor, -1.0, 1.0)  # Clip values to [-1.0, 1.0]
 
-            bt.logging.info(f"Scores: {scores}")
+                            # Write to WAV file
+                            output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
+                            wavfile.write(output_path, sampling_rate, audio_tensor)
+                            score = template.reward.score(output_path, text_input)
+
+                            # Get the current time
+                            current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+
+                            # Append the score, time, and filename to the CSV file
+                            with open('scores.csv', 'a', newline='') as csvfile:
+                                writer = csv.writer(csvfile)
+                                writer.writerow([output_path, score, current_time])
+
+                            # print the csv file
+                            df = pd.read_csv('scores.csv')
+                            print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
+
+
+                            # Update the global score of the miner.
+                            # This score contributes to the miner's weight in the network.
+                            # A higher weight means that the miner has been consistently responding correctly.
+                            scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                            time.sleep(20)
+                            
+                        except Exception as e:
+                            bt.logging.error(f"Error writing WAV file: {e}")
+                    else:
+                        bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
+
+            bt.logging.info(f"Scores is for caring: {scores}") #@isharab [0]
             # Periodically update the weights on the Bittensor blockchain.
             if (step + 1) % 10 == 0:
                 # TODO(developer): Define how the validator normalizes scores before setting weights.

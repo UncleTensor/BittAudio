@@ -1,2 +1,14 @@
 bittensor
 torch
+librosa
+transformers
+jiwer
+torchaudio
+torch
+pandas
+matplotlib
+datasets
+sentencepiece
+soundfile
+speechbrain
+tabulate
