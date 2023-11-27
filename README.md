@@ -35,8 +35,8 @@ Join the Text-to-Voice Subnetwork and contribute to the advancement of decentral
 ## Installation
 ```bash
 cd 
-git clone https://github.com/isharab/ttvMain.git
-cd ttvMain 
+git clone https://github.com/UncleTensor/AudioSubnet.git
+cd AudioSubtensor
 pip install -e . 
 ```
 
