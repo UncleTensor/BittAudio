@@ -21,13 +21,13 @@
 # TODO(developer): Rewrite based on protocol and validator defintion.
 
 # Step 1: Import necessary libraries and modules
-import os
-import time
+import bittensor as bt
+import traceback
 import argparse
 import typing
-import traceback
-import bittensor as bt
+import time
 import sys
+import os
 # Adjust the path to include the directory where 'template' is located
 # Get the directory of the current script
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,14 +41,12 @@ if ttv not in sys.path:
     sys.path.insert(0, ttv)
 
 # import this repo
-import template
 from models.text_to_speech_models import TextToSpeechModels
 from models.text_to_speech_models import SunoBark
+import template
+
+
 # from models.text_to_speech_models import EnglishTextToSpeech
-
-
-
-
 def get_config():
     # Step 2: Set up the configuration parser
     # This function initializes the necessary command-line arguments.
@@ -197,10 +195,6 @@ def main(config):
             f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
         )
         return prirority
-    
-
-    
-    
 
     # This is the core miner function, which decides the miner's response to a valid, high-priority request.
     def ProcessSpeech(synapse: template.protocol.TextToSpeech) -> template.protocol.TextToSpeech:
@@ -209,10 +203,8 @@ def main(config):
         
         # Here we use the models class to generate the speech
         speech = tts_models.generate_speech(synapse.text_input)
-
         # Check if 'speech' contains valid audio data
         # bt.logging.debug(f"Generated speech tensor  ===============================================================================================================================================================: {speech}")
-
 
         # Assign 'speech' to 'speech_output'
         synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list

@@ -16,16 +16,18 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-import os
-import torch
-import torchaudio
-from datasets import load_dataset
-from torchaudio.transforms import Resample
-from transformers import VitsModel, AutoTokenizer
-from speechbrain.pretrained import EncoderClassifier
-from transformers import AutoProcessor, AutoModelForTextToWaveform
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+from transformers import AutoProcessor, AutoModelForTextToWaveform
+from speechbrain.pretrained import EncoderClassifier
+from transformers import VitsModel, AutoTokenizer
+from torchaudio.transforms import Resample
+from datasets import load_dataset
+import torchaudio
+import torch
+import os
 
+
+# Speaker Embedding Generator using SpeechBrain's Speaker Recognition Model
 class SpeakerRecognizer:
     def __init__(self):
         self.spk_model_name = "speechbrain/spkrec-xvect-voxceleb"
@@ -49,9 +51,8 @@ class SpeakerRecognizer:
             speaker_embeddings = speaker_embeddings.squeeze().cpu().numpy()
 
         return speaker_embeddings
-
-
-
+    
+# Text-to-Speech Synthesis with Customizable Speaker Embeddings
 class TextToSpeechModels:
     def __init__(self):
         # Load the models and processor
@@ -78,6 +79,8 @@ class TextToSpeechModels:
         speech = self.model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=self.vocoder)
         return speech
 
+
+# Text-to-Speech Generation Using Suno Bark's Pretrained Model
 class SunoBark:
     def __init__(self):
         self.processor = AutoProcessor.from_pretrained("suno/bark-small")

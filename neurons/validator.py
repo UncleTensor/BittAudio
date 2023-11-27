@@ -21,21 +21,22 @@
 # TODO(developer): Rewrite based on protocol defintion.
 
 # Step 1: Import necessary libraries and modules
-import os
-import time
-import torch
-import argparse
-import traceback
-import bittensor as bt
-from scipy.io import wavfile
-import asyncio
 from datasets import load_dataset
+from tabulate import tabulate
+from scipy.io import wavfile
+import bittensor as bt
+import pandas as pd
+import numpy as np
+import traceback
+import argparse
+import asyncio
 import random
+import torch
+import time
 import csv
 import sys
-import numpy as np
-import pandas as pd
-from tabulate import tabulate
+import os
+
 
 # Adjust the path to include the directory where 'template' is located
 # Get the directory of the current script

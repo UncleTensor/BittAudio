@@ -1,8 +1,10 @@
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
-import torch
 from jiwer import wer
 import torchaudio
+import torch
 
+
+# Speech-to-Text Transcription and Evaluation with Wav2Vec2 Model
 class SpeechToTextEvaluator:
     def __init__(self, model_name="facebook/wav2vec2-base-960h"):
         device = "cuda" if torch.cuda.is_available() else "cpu"

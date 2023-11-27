@@ -110,10 +110,6 @@ import bittensor as bt
 #         """
 #         return self.dummy_output
 
-
-
-
-
 class TextToSpeech(bt.Synapse):
     """
     TextToSpeech class inherits from bt.Synapse.

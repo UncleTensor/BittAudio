@@ -1,7 +1,7 @@
-import os
-import time
-import subprocess
 import pandas as pd
+import subprocess
+import time
+import os
 import re
 
 def extract_column_positions(header_line):
