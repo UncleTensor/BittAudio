@@ -17,29 +17,21 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-
+# -*- coding: utf-8 -*-
 import typing
-
 from template.subjective import SpeechToTextEvaluator
 import bittensor as bt
-# -*- coding: utf-8 -*-
-"""
-@author: Gabriel Mittag, TU-Berlin
-"""
 import os
 import multiprocessing
 import copy
 import math
-
 import librosa as lb
 import numpy as np
 import pandas as pd; pd.options.mode.chained_assignment = None
 import matplotlib.pyplot as plt
-
 from tqdm import tqdm
 from scipy.stats import pearsonr
 from scipy.optimize import minimize
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -48,6 +40,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import template
+import pandas as pd
 
 
 #%% Models
@@ -3464,7 +3457,7 @@ class nisqaModel(object):
             
         elif (self.args['tr_checkpoint']!='every_epoch') and (self.args['tr_checkpoint']!='best_only'):
             raise ValueError('selected tr_checkpoint option not available')
-import pandas as pd
+
 
 def calculate_audio_quality_scores(data):
     # Define the weights for each metric
@@ -3503,11 +3496,6 @@ def calculate_audio_quality_scores(data):
 
     # Return the DataFrame with the composite score
     return data[['deg', 'model', 'composite_score']]
-
-# Example usage:
-# data = pd.read_csv('path_to_nisqa_output.csv')
-# scored_data = calculate_audio_quality_scores(data)
-# print(scored_data)
 
 
 def score(file, text) -> float:
@@ -3549,14 +3537,11 @@ def score(file, text) -> float:
     # Word Error Rate prediction
     wer = SpeechToTextEvaluator()
     word_error_rate = wer.evaluate_wer(file, text)
-    # print the present working directory
     # Instantiate the nisqaModel with hardcoded arguments
     nisqa = nisqaModel(args)
     # Execute the prediction directly
     nisqa.predict()
-
     data = pd.read_csv('NISQA_results.csv')
     score_data = calculate_audio_quality_scores(data)
-    # print("Final Composite score", score_data['composite_score'].iloc[0] * (1.0 - word_error_rate /10 ))
     return 1.0 if score_data['composite_score'].iloc[0] * (1.0 - word_error_rate /100 ) >= 0.68 else 0.0
 

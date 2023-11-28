@@ -21,29 +21,29 @@
 # TODO(developer): Rewrite based on protocol defintion.
 
 # Step 1: Import necessary libraries and modules
-from datasets import load_dataset
-from tabulate import tabulate
-from scipy.io import wavfile
-import bittensor as bt
-import pandas as pd
-import numpy as np
-import traceback
-import argparse
-import asyncio
-import random
-import torch
+import os
 import time
+import torch
+import argparse
+import traceback
+import bittensor as bt
+from scipy.io import wavfile
+import asyncio
+from datasets import load_dataset
+import random
 import csv
 import sys
-import os
-
+import numpy as np
+import pandas as pd
+from tabulate import tabulate
+import torchaudio
 
 # Adjust the path to include the directory where 'template' is located
 # Get the directory of the current script
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the absolute path
-ttv = os.path.abspath(os.path.join(current_script_dir, "AudioSubnet"))
+ttv = os.path.abspath(os.path.join(current_script_dir, "ttvMain"))
 
 # Check if the path is already in sys.path
 if ttv not in sys.path:
@@ -193,12 +193,12 @@ def main(config):
                 metagraph.axons,
                 template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
                 deserialize=True,
-                timeout=120,
+                timeout=20,
             )
 
             # TODO(developer): Define how the validator scores responses.
             # Adjust the scores based on responses from miners.
-            for i, resp_i in enumerate(responses[:-1]): # @isharab [:-1]
+            for i, resp_i in enumerate(responses[:-1]): # The last response is the dendrite's own response - x3r!
                 if isinstance(resp_i, template.protocol.TextToSpeech):
                     #The response has been deserialized into the expected class
                     # Now you can access its properties
@@ -208,18 +208,21 @@ def main(config):
                     speech_output = resp_i.speech_output
                     if speech_output is not None:
                         try:
-                            # Ensure audio_tensor is of correct type and range
-                            audio_tensor = torch.tensor(speech_output, dtype=torch.float32).numpy()
-                            audio_tensor = np.clip(audio_tensor, -1.0, 1.0)  # Clip values to [-1.0, 1.0]
-
-                            # Write to WAV file
+                            # Convert the list to a tensor
+                            speech_tensor = torch.Tensor(speech_output)
+                            # Normalize the speech data
+                            audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
+                            # Convert to 32-bit PCM
+                            audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+                            # Add an extra dimension to make it a 2D tensor
+                            audio_data_int = audio_data_int.unsqueeze(0)
+                            # Save the audio data as a .wav file
                             output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
-                            wavfile.write(output_path, sampling_rate, audio_tensor)
+                            torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                            # wavfile.write(output_path, sampling_rate, audio_tensor)
                             score = template.reward.score(output_path, text_input)
-
                             # Get the current time
                             current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-
                             # Append the score, time, and filename to the CSV file
                             with open('scores.csv', 'a', newline='') as csvfile:
                                 writer = csv.writer(csvfile)
@@ -241,7 +244,7 @@ def main(config):
                     else:
                         bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
 
-            bt.logging.info(f"Scores is for caring: {scores}") #@isharab [0]
+            bt.logging.info(f"Scores: {scores}")
             # Periodically update the weights on the Bittensor blockchain.
             if (step + 1) % 10 == 0:
                 # TODO(developer): Define how the validator normalizes scores before setting weights.

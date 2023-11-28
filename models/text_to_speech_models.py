@@ -103,20 +103,15 @@ class SunoBark:
         return speech
     
 
-# from scipy.io.wavfile import write as write_wav
+from scipy.io.wavfile import write as write_wav
 
-# class EnglishTextToSpeech:
-#     def __init__(self, output_file="output.wav"):
-#         self.model = VitsModel.from_pretrained("facebook/mms-tts-eng")
-#         self.tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-eng")
-#         self.output_file = output_file
+class EnglishTextToSpeech:
+    def __init__(self):
+        self.model = VitsModel.from_pretrained("facebook/mms-tts-eng")
+        self.tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-eng")
 
-#     def generate_speech(self, text_input):
-#         inputs = self.tokenizer(text_input, return_tensors="pt")
-#         with torch.no_grad():
-#             output = self.model(**inputs).waveform
-
-#         # Save the waveform as a WAV file
-#         write_wav(self.output_file, rate=self.model.config.sampling_rate, data=output.float().numpy())
-        
-#         return output
+    def generate_speech(self, text_input):
+        inputs = self.tokenizer(text_input, return_tensors="pt")
+        with torch.no_grad():
+            speech = self.model(**inputs).waveform
+        return speech

@@ -22,9 +22,13 @@
 
 # Step 1: Import necessary libraries and modules
 import bittensor as bt
+import numpy as np
+import torchaudio
 import traceback
 import argparse
 import typing
+import torch
+import wave
 import time
 import sys
 import os
@@ -43,10 +47,11 @@ if ttv not in sys.path:
 # import this repo
 from models.text_to_speech_models import TextToSpeechModels
 from models.text_to_speech_models import SunoBark
+from models.text_to_speech_models import EnglishTextToSpeech
 import template
 
 
-# from models.text_to_speech_models import EnglishTextToSpeech
+
 def get_config():
     # Step 2: Set up the configuration parser
     # This function initializes the necessary command-line arguments.
@@ -114,9 +119,9 @@ def main(config):
     if config.model == "microsoft/speecht5_tts":
         bt.logging.info("Using the TextToSpeechModels with the supplied model: microsoft/speecht5_tts")
         tts_models = TextToSpeechModels()
-    # elif config.model == "facebook/mms-tts-eng":
-    #     bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
-    #     tts_models = EnglishTextToSpeech()
+    elif config.model == "facebook/mms-tts-eng":
+        bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
+        tts_models = EnglishTextToSpeech()
     elif config.model == "suno/bark-small":
         bt.logging.info("Using the SunoBark with the supplied model: suno/bark-small")
         tts_models = SunoBark()
@@ -198,21 +203,79 @@ def main(config):
 
     # This is the core miner function, which decides the miner's response to a valid, high-priority request.
     def ProcessSpeech(synapse: template.protocol.TextToSpeech) -> template.protocol.TextToSpeech:
-        bt.logging.debug("In prompt!")
-        # print(synapse.text_input)
-        
+        bt.logging.debug("The prompt recieved from validator!")
         # Here we use the models class to generate the speech
         speech = tts_models.generate_speech(synapse.text_input)
+        if config.model == "facebook/mms-tts-eng":
+            # Assuming 'output' is a PyTorch tensor.
+            # Normalize your data to -1 to 1 if not already
+            audio_data = speech / torch.max(torch.abs(speech))
+
+            # # If the audio is mono, ensure it has a channel dimension
+            if audio_data.ndim == 1:
+                audio_data = audio_data.unsqueeze(0)
+
+            # convert to 32-bit PCM
+            audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+
+            # Save the audio data as integers
+            torchaudio.save('speech.wav', src=audio_data_int, sample_rate=16000)
+            # Open the WAV file and read the frames
+            try:
+                with wave.open('speech.wav', 'rb') as wav_file:
+                    frames = wav_file.readframes(wav_file.getnframes())
+                    sample_width = wav_file.getsampwidth()
+            except Exception as e:
+                print(f"An error occurred while reading the audio data: {e}")
+            # Initialize dtype to a default value
+            dtype = None
+            # Determine the correct dtype based on sample width
+            # Commonly, sample width is 2 bytes for 16-bit audio
+            if sample_width == 2:
+                dtype = np.int16
+            elif sample_width == 1:
+                dtype = np.int8
+            elif sample_width == 4:
+                dtype = np.int32
+
+            # Check if dtype has been assigned a value
+            if dtype is None:
+                print(f"Unexpected sample width: {sample_width}")
+                return
+
+            # Convert the bytes data to a numpy array
+            audio_array = np.frombuffer(frames, dtype=dtype)
+            # Convert the numpy array to a list
+            speech = audio_array.tolist()
+
         # Check if 'speech' contains valid audio data
-        # bt.logging.debug(f"Generated speech tensor  ===============================================================================================================================================================: {speech}")
+        if speech is None:
+            bt.logging.error("No speech generated!")
+            return None
+        else:
+            try:
+                print("Speech generated!")
+                if config.model == "facebook/mms-tts-eng":
+                    # Convert the list to a tensor
+                    speech_tensor = torch.Tensor(speech)
 
-        # Assign 'speech' to 'speech_output'
-        synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list
-        # bt.logging.debug(f"Assigned speech output  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: {synapse.speech_output}") # @isharab
+                    # Normalize the speech data
+                    audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
 
-        # Check 'synapse' before returning it
-        # print("SYNAPSE:", synapse)
-        return synapse
+                    # Convert to 32-bit PCM
+                    audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+
+                    # Add an extra dimension to make it a 2D tensor
+                    audio_data_int = audio_data_int.unsqueeze(0)
+
+                    # Save the audio data as a .wav file
+                    # torchaudio.save('speech_output.wav', src=audio_data_int, sample_rate=16000)
+                    synapse.speech_output = speech  # Convert PyTorch tensor to a list
+                else:
+                    synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list
+                return synapse
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
     # Step 6: Build and link miner functions to the axon.
     # The axon handles request processing, allowing validators to send this process requests.
