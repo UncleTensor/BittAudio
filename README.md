@@ -35,7 +35,7 @@ Join the Audio Subnetwork and contribute to the advancement of decentralized tex
 ## Installation
 ```bash 
 git clone https://github.com/UncleTensor/AudioSubnet.git
-cd AudioSubtensor
+cd AudioSubnet
 pip install -r requirements.txt
 python -m pip install -e . 
 ```
