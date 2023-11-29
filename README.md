@@ -63,7 +63,7 @@ Certainly! Below are instructions for using the arguments in `miner.py` and `val
 
 ## Mining 
 ```bash
-python3.9 neurons/miner.py --netuid <your_subnet_uid> --wallet.name <your_wallet_name> --wallet.hotkey default --logging.debug --model <your_model_name>
+python3 neurons/miner.py --netuid <subnet_uid> --wallet.name <wallet_name> --wallet.hotkey <hotkey_name> --logging.debug --model <model_name>
 ```
 Certainly! Here's the information formatted as a table for README.md:
 
@@ -99,7 +99,7 @@ Certainly! Here's the information formatted as a table for README.md:
 
 ## Validating  
 ```bash
-python3.9 neurons/validator.py --netuid <your_subnet_uid> --wallet.name <your_validator_wallet_name> --wallet.hotkey default --logging.debug --hub_key <huggingface_access_key>
+python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> --wallet.hotkey <hotkey_name> --logging.debug --hub_key <huggingface_access_key>
 ```
 Certainly! Here's the information formatted as a table for README.md:
 
