@@ -65,7 +65,6 @@ Certainly! Below are instructions for using the arguments in `miner.py` and `val
 ```bash
 python3 neurons/miner.py --netuid <subnet_uid> --wallet.name <wallet_name> --wallet.hotkey <hotkey_name> --logging.debug --model <model_name>
 ```
-Certainly! Here's the information formatted as a table for README.md:
 
 ### Bittensor Miner Script Arguments:
 
@@ -101,7 +100,6 @@ Certainly! Here's the information formatted as a table for README.md:
 ```bash
 python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> --wallet.hotkey <hotkey_name> --logging.debug --hub_key <huggingface_access_key>
 ```
-Certainly! Here's the information formatted as a table for README.md:
 
 ### Bittensor Validator Script Arguments:
 
