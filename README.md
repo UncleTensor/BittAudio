@@ -40,6 +40,13 @@ pip install -r requirements.txt
 python -m pip install -e . 
 ```
 
+## Run a Subtensor instance:
+```bash 
+git clone https://github.com/opentensor/subtensor.git
+cd subtensor
+docker compose up --detach
+```
+
 **Evaluation Mechanism:**
 The evaluation mechanism involves the validator querying miners on the network with random prompts and receiving text-to-speech responses. These responses are scored based on correctness, and the weights on the Bittensor network are updated accordingly. The scoring is conducted using a reward function from the template module.
 
@@ -57,7 +64,7 @@ The code incorporates three text-to-speech models: Microsoft/speecht5_tts, Faceb
 
 In general, the resource demands of text-to-speech models can vary significantly. Larger models often necessitate more powerful GPUs and additional system resources. It is advisable to consult the documentation or model repository for the specific requirements of each model. Additionally, if GPU acceleration is employed, having a compatible GPU with enough VRAM is typically advantageous for faster processing.
 
-Certainly! Below are instructions for using the arguments in `miner.py` and `validator.py`:
+Below are instructions for using the arguments in `miner.py` and `validator.py`:
 
 ### Instructions for `miner.py`:
 
@@ -71,30 +78,20 @@ python3 neurons/miner.py --netuid <subnet_uid> --wallet.name <wallet_name> --wal
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
 | **Configuration Arguments**     | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
-|                                 | `--model`                            | 'microsoft/speecht5_tts'   | The model to use for text-to-speech.                                                                                 |
-|                                 | `--netuid`                           | 1                          | The chain subnet UID.                                                                                                 |
+|                                 | `--model`                            | 'microsoft/speecht5_tts' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
+|                                 | `--netuid`                           | Testnet: 31 ; Mainnet: 16                          | The chain subnet UID.                                                                                                 |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
 |                                 | `--logging.trace`                    | -                          | Enable trace logs.                                                                                                   |
 |                                 | `--logging.logging_dir`              | -                          | Directory for logging.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
-|                                 | `--wallet.hotkey`                    | "default"                  | Hotkey path for the wallet.                                                                                          |
+|                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 |                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
 | **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.                                                                                    |
 
-### Main Function Flow:
 
-1. Set up logging.
-2. Check the supplied model and log appropriate information.
-3. Initialize Bittensor miner objects (wallet, subtensor, metagraph).
-4. Set up miner functionalities (blacklist, priority, main processing function).
-5. Build and link miner functions to the axon.
-6. Serve the axon on the network with specified netuid.
-7. Start the axon server.
-8. Keep the miner alive in a loop, periodically updating network knowledge.
-9. Handle interruptions and errors gracefully.
-
+### Instructions for `validator.py`:
 
 ## Validating  
 ```bash
@@ -107,7 +104,7 @@ python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> -
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
 | **Configuration Arguments**     | `--alpha`                            | 0.9                        | The weight moving average scoring.                                                                                    |
 |                                 | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
-|                                 | `--netuid`                           | 1                          | The chain subnet UID.                                                                                                 |
+|                                 | `--netuid`                           | Testnet: 31 ; Mainnet: 16                          | The chain subnet UID.                                                                                                 |
 |                                 | `--hub_key`                          | None                       | Supply the Huggingface Hub API key for the prompt dataset.                                                            |
 |                                 | `--threshold`                        | 0.68                       | The threshold for response scoring.                                                                                   |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
@@ -116,17 +113,6 @@ python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> -
 |                                 | `--logging.trace`                    | -                          | Enable trace logs.                                                                                                   |
 |                                 | `--logging.logging_dir`              | -                          | Directory for logging.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
-|                                 | `--wallet.hotkey`                    | "default"                  | Hotkey path for the wallet.                                                                                          |
+|                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 |                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
 
-### Main Function Flow:
-
-1. Set up logging.
-2. Build Bittensor validator objects (wallet, subtensor, dendrite, metagraph).
-3. Connect the validator to the network.
-4. Set up initial scoring weights for validation.
-5. Start the main validation loop.
-6. Query miners on the network.
-7. Score responses and update weights.
-8. Periodically update weights on the Bittensor blockchain.
-9. Handle errors and interruptions gracefully.
