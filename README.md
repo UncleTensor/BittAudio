@@ -3,21 +3,21 @@
 This subnetwork is a decentralized system designed for text-to-audio applications within the Bittensor network. It consists of a Validator and a Miner working collaboratively to generate high-quality audio from provided prompts. 
 In the first phase, we will start with text-to-speech (TTS), working in parallel to add music generation in the upcoming updates. 
 
-## Validator
+## Validators
 
-The Validator is responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validator evaluates the quality of the generated audio produced by the Miners and rewards them based on the perceived quality.
+The Validators are responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validators evaluates the quality of the generated audio produced by the Miners and rewards them based on the perceived quality.
 
-## Miner
+## Miners
 
-Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validator. Starting with the leverage of advanced text-to-speech models, Miners aim to produce high-fidelity and natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the rewards received from the Validator.
+Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validators. Starting with the leverage of advanced text-to-speech models, miners aim to produce high-fidelity and natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the miner's rewards.
 
 ## Workflow
 
-1. **Prompt Generation:** The Validator generates prompts and distributes them to the Miners on the network.
+1. **Prompt Generation:** The Validators generates prompts and distributes them to the Miners on the network.
 
 2. **Text-to-Speech Processing:** Miners receive the prompts and utilize text-to-speech models to convert the text into voice audio.
 
-3. **Quality Evaluation:** The Validator assesses the quality of the generated audio, considering factors such as clarity, naturalness, and adherence to the prompt.
+3. **Quality Evaluation:** The Validator assesses the quality of the generated audio, considering factors such as: clarity, naturalness, and adherence to the prompt.
 
 4. **Reward Distribution:** Based on the quality assessment, the Validator rewards Miners accordingly. Miners with consistently higher-quality outputs receive a larger share of rewards.
 
@@ -29,19 +29,19 @@ Miners in the Audio Subnetwork are tasked with generating audio from the text pr
 
 - **Bittensor Network Integration:** Leveraging the Bittensor network ensures secure and transparent interactions between Validators and Miners.
 
-Join the Text-to-Voice Subnetwork and contribute to the advancement of decentralized text-to-speech technologies within the Bittensor ecosystem.
+Join the Audio Subnetwork and contribute to the advancement of decentralized text-to-speech / text-to-music technologies within the Bittensor ecosystem.
 
 
 ## Installation
-```bash
-cd 
+```bash 
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubtensor
-pip install -e . 
+pip install -r requirements.txt
+python -m pip install -e . 
 ```
 
 **Evaluation Mechanism:**
-The evaluation mechanism involves the validator querying miners on the network with random prompts, receiving text-to-speech responses, scoring them based on correctness, and updating weights on the Bittensor blockchain. The scoring is done using a reward function from the `template` module.
+The evaluation mechanism involves the validator querying miners on the network with random prompts, receiving text-to-speech responses, scoring them based on correctness, and updating weights on the Bittensor network. The scoring is done using a reward function from the `template` module.
 
 **Miner/Validator Hardware Specs:**
 The hardware requirements for miners and validators depend on the complexity and resource demands of the chosen text-to-speech models. Typically, a machine with a decent CPU, GPU, sufficient VRAM, and RAM is required. Disk space requirements would depend on the size of the models and any additional data.
