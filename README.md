@@ -5,11 +5,11 @@ In the first phase, we will start with text-to-speech (TTS), working in parallel
 
 ## Validators
 
-The Validators are responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validators evaluates the quality of the generated audio produced by the Miners and rewards them based on the perceived quality.
+The Validators are responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validators evaluate the quality of the generated audio produced by the Miners and reward them based on the perceived quality.
 
 ## Miners
 
-Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validators. Starting with the leverage of advanced text-to-speech models, miners aim to produce high-fidelity and natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the miner's rewards.
+Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validators. Leveraging advanced text-to-speech models, miners aim to produce high-fidelity, natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the miners' rewards.
 
 ## Workflow
 
@@ -41,21 +41,21 @@ python -m pip install -e .
 ```
 
 **Evaluation Mechanism:**
-The evaluation mechanism involves the validator querying miners on the network with random prompts, receiving text-to-speech responses, scoring them based on correctness, and updating weights on the Bittensor network. The scoring is done using a reward function from the `template` module.
+The evaluation mechanism involves the validator querying miners on the network with random prompts and receiving text-to-speech responses. These responses are scored based on correctness, and the weights on the Bittensor network are updated accordingly. The scoring is conducted using a reward function from the template module.
 
 **Miner/Validator Hardware Specs:**
-The hardware requirements for miners and validators depend on the complexity and resource demands of the chosen text-to-speech models. Typically, a machine with a decent CPU, GPU, sufficient VRAM, and RAM is required. Disk space requirements would depend on the size of the models and any additional data.
+The hardware requirements for miners and validators vary depending on the complexity and resource demands of the selected text-to-speech models. Typically, a machine equipped with a capable CPU and GPU, along with sufficient VRAM and RAM, is necessary. The amount of disk space required will depend on the size of the models and any additional data.
 
 **How to Run a Validator:**
-To run a validator, execute the `validator.py` script with the necessary command-line arguments. The script sets up Bittensor objects, connects to the network, queries miners, scores responses, and updates weights.
+To operate a validator, you need to run the validator.py script with the required command-line arguments. This script initiates the setup of Bittensor objects, establishes a connection to the network, queries miners, scores their responses, and updates weights accordingly.
 
 **How to Run a Miner:**
-To run a miner, execute the `miner.py` script with the required configuration. The miner initializes Bittensor objects, connects to the network, and processes incoming text-to-speech requests.
+To operate a miner, run the miner.py script with the necessary configuration. This process involves initializing Bittensor objects, establishing a connection to the network, and processing incoming text-to-speech requests.
 
 **Text-to-Speech Models Supported:**
-The code references two text-to-speech models: `TextToSpeechModels` and `SunoBark`. The specific requirements for each model in terms of CPU, GPU VRAM, RAM, and disk space are not explicitly provided in the shared code. To determine these requirements, you may need to refer to the documentation or implementation details of these models.
+The code incorporates three text-to-speech models: Microsoft/speecht5_tts, Facebook/mms-tts-eng and SunoBark. However, the specific requirements for each model, including CPU, GPU VRAM, RAM, and disk space, are not explicitly stated in the provided code. To ascertain these requirements, it may be necessary to consult the documentation or delve into the implementation details of these models.
 
-In general, text-to-speech models can vary in their resource demands. Larger models may require more powerful GPUs and additional system resources. It's recommended to check the documentation or model repository for specific model requirements. If GPU acceleration is utilized, a compatible GPU with sufficient VRAM is often beneficial for faster processing.
+In general, the resource demands of text-to-speech models can vary significantly. Larger models often necessitate more powerful GPUs and additional system resources. It is advisable to consult the documentation or model repository for the specific requirements of each model. Additionally, if GPU acceleration is employed, having a compatible GPU with enough VRAM is typically advantageous for faster processing.
 
 Certainly! Below are instructions for using the arguments in `miner.py` and `validator.py`:
 
