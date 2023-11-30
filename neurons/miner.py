@@ -21,6 +21,7 @@
 # TODO(developer): Rewrite based on protocol and validator defintion.
 
 # Step 1: Import necessary libraries and modules
+from scipy.io.wavfile import write as write_wav
 import bittensor as bt
 import numpy as np
 import torchaudio
@@ -122,8 +123,8 @@ def main(config):
     elif config.model == "facebook/mms-tts-eng":
         bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
         tts_models = EnglishTextToSpeech()
-    elif config.model == "suno/bark-small":
-        bt.logging.info("Using the SunoBark with the supplied model: suno/bark-small")
+    elif config.model == "suno/bark":
+        bt.logging.info("Using the SunoBark with the supplied model: suno/bark")
         tts_models = SunoBark()
     elif config.model is None:
         bt.logging.error("Model name was not supplied. Exiting the program.")
@@ -271,6 +272,14 @@ def main(config):
                     # Save the audio data as a .wav file
                     # torchaudio.save('speech_output.wav', src=audio_data_int, sample_rate=16000)
                     synapse.speech_output = speech  # Convert PyTorch tensor to a list
+
+                elif config.model == "suno/bark":
+                    # Convert the list to a tensor
+                    # Move the audio array back to CPU for saving to disk
+                    speech = speech.cpu().numpy().squeeze()
+                    # write_wav("output_audio.wav", 24000, speech)
+                    synapse.model_name = config.model
+                    synapse.speech_output = speech.tolist()
                 else:
                     synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list
                 return synapse
@@ -309,7 +318,7 @@ def main(config):
         try:
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
-            if step % 5 == 0:
+            if step % 20 == 0:
                 metagraph = subtensor.metagraph(config.netuid)
                 log = (
                     f"Step:{step} | "

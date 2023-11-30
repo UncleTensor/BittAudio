@@ -193,7 +193,7 @@ def main(config):
                 metagraph.axons,
                 template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
                 deserialize=True,
-                timeout=20,
+                timeout=60,
             )
 
             # TODO(developer): Define how the validator scores responses.
@@ -218,7 +218,11 @@ def main(config):
                             audio_data_int = audio_data_int.unsqueeze(0)
                             # Save the audio data as a .wav file
                             output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
-                            torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                            # set model sampling rate to 24000 if the model is Suno Bark
+                            if resp_i.model_name == "suno/bark":
+                                torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                            else:
+                                torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
                             # wavfile.write(output_path, sampling_rate, audio_tensor)
                             score = template.reward.score(output_path, text_input)
                             # Get the current time
@@ -237,7 +241,6 @@ def main(config):
                             # This score contributes to the miner's weight in the network.
                             # A higher weight means that the miner has been consistently responding correctly.
                             scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
-                            time.sleep(20)
                             
                         except Exception as e:
                             bt.logging.error(f"Error writing WAV file: {e}")
@@ -246,7 +249,7 @@ def main(config):
 
             bt.logging.info(f"Scores: {scores}")
             # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 10 == 0:
+            if (step + 1) % 2 == 0:
                 # TODO(developer): Define how the validator normalizes scores before setting weights.
                 weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")

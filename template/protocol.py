@@ -27,6 +27,7 @@ class TextToSpeech(bt.Synapse):
     """
     # Required request input, filled by sending dendrite caller.
     text_input: Optional[str] = None
+    model_name: Optional[str] = None
 
     # Here we define speech_output as an Optional PyTorch tensor instead of bytes.
     speech_output: Optional[List] = None

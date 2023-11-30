@@ -19,6 +19,7 @@
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from transformers import AutoProcessor, AutoModelForTextToWaveform
 from speechbrain.pretrained import EncoderClassifier
+from transformers import AutoProcessor, BarkModel
 from transformers import VitsModel, AutoTokenizer
 from torchaudio.transforms import Resample
 from datasets import load_dataset
@@ -83,27 +84,22 @@ class TextToSpeechModels:
 # Text-to-Speech Generation Using Suno Bark's Pretrained Model
 class SunoBark:
     def __init__(self):
-        self.processor = AutoProcessor.from_pretrained("suno/bark-small")
-        self.model = AutoModelForTextToWaveform.from_pretrained("suno/bark-small")
+        #Load the processor and model
+        self.processor = AutoProcessor.from_pretrained("suno/bark")
+        self.model = BarkModel.from_pretrained("suno/bark")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+    def generate_speech(self, text_input):
+        # Process the text with v2/en_speaker_6 , TODO: later to add more speakers
+        inputs = self.processor(text_input, voice_preset="v2/en_speaker_6", return_tensors="pt")
 
-    def generate_speech(self, text_input,):
-        inputs = self.processor(
-            text=text_input,
-            return_tensors="pt",
-            padding="longest",  # Pad to the longest sequence in the batch (or a specified length)
-            add_special_tokens=True  # Add special tokens (e.g., [CLS], [SEP])
-        )
-        # Ensure 'attention_mask' is included in the inputs
-        speech = self.model.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            do_sample=True
+        # Move inputs to the same device as model
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        )
+        # Generate audio
+        speech = self.model.generate(**inputs)
         return speech
     
-
-from scipy.io.wavfile import write as write_wav
 
 class EnglishTextToSpeech:
     def __init__(self):
