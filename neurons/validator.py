@@ -193,7 +193,7 @@ def main(config):
                 metagraph.axons,
                 template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
                 deserialize=True,
-                timeout=60,
+                timeout=30,
             )
 
             # TODO(developer): Define how the validator scores responses.
@@ -249,7 +249,7 @@ def main(config):
 
             bt.logging.info(f"Scores: {scores}")
             # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 2 == 0:
+            if (step + 1) % 10 == 0:
                 # TODO(developer): Define how the validator normalizes scores before setting weights.
                 weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")

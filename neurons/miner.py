@@ -318,7 +318,7 @@ def main(config):
         try:
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
-            if step % 20 == 0:
+            if step % 500 == 0:
                 metagraph = subtensor.metagraph(config.netuid)
                 log = (
                     f"Step:{step} | "
