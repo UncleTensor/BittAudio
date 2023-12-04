@@ -222,6 +222,7 @@ def main(config):
             # Save the audio data as integers
             torchaudio.save('speech.wav', src=audio_data_int, sample_rate=16000)
             # Open the WAV file and read the frames
+            sample_width = None
             try:
                 with wave.open('speech.wav', 'rb') as wav_file:
                     frames = wav_file.readframes(wav_file.getnframes())
