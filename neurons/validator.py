@@ -183,101 +183,163 @@ def main(config):
     # Step 7: The Main Validation Loop
     bt.logging.info("Starting validator loop.")
     step = 0
-    d = bt.dendrite()
+
+    total_dendrites_per_query = 25 
+    minimum_dendrites_per_query = 3 
+
     while True:
         try:
-            # TODO(developer): Define how the validator selects a miner to query, how often, etc.
-            # Broadcast a query to all miners on the network.
-            random_prompt = random.choice(prompts)
-            responses = dendrite.query(
-                metagraph.axons,
-                template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
-                deserialize=True,
-                timeout=30,
-            )
+            # Per 10 blocks, sync the subtensor state with the blockchain.
+            if step % 5 == 0:
+                metagraph.sync(subtensor = subtensor)
+                bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
 
-            # TODO(developer): Define how the validator scores responses.
-            # Adjust the scores based on responses from miners.
-            for i, resp_i in enumerate(responses[:-1]): # The last response is the dendrite's own response - x3r!
-                if isinstance(resp_i, template.protocol.TextToSpeech):
-                    #The response has been deserialized into the expected class
-                    # Now you can access its properties
-                    text_input = resp_i.text_input
+            # If the metagraph has changed, update the weights.
+            # Get the uids of all miners in the network.
+            uids = metagraph.uids.tolist()
+            # If there are more uids than scores, add more weights.
+            if len(uids) > len(scores):
+                bt.logging.trace("Adding more weights")
+                size_difference = len(uids) - len(scores)
+                new_scores = torch.zeros(size_difference, dtype=torch.float32)
+                scores = torch.cat((scores, new_scores))
+                del new_scores
+            # If there are less uids than scores, remove some weights.
+            queryable_uids = (metagraph.total_stake >= 0)
+            bt.logging.info(f"queryable_uids:{queryable_uids}")
+            
+            # Remove the weights of miners that are not queryable.
+            queryable_uids = queryable_uids * torch.Tensor([metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+            active_miners = torch.sum(queryable_uids)
+            dendrites_per_query = total_dendrites_per_query
 
-                    # Check if speech_output is not None before processing
-                    speech_output = resp_i.speech_output
-                    if speech_output is not None:
-                        try:
-                            # Convert the list to a tensor
-                            speech_tensor = torch.Tensor(speech_output)
-                            # Normalize the speech data
-                            audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
-                            # Convert to 32-bit PCM
-                            audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
-                            # Add an extra dimension to make it a 2D tensor
-                            audio_data_int = audio_data_int.unsqueeze(0)
-                            # Save the audio data as a .wav file
-                            output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
-                            # set model sampling rate to 24000 if the model is Suno Bark
-                            if resp_i.model_name == "suno/bark":
-                                torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
-                            else:
-                                torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
-                            # wavfile.write(output_path, sampling_rate, audio_tensor)
-                            score = template.reward.score(output_path, text_input)
-                            # Get the current time
-                            current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                            # Append the score, time, and filename to the CSV file
-                            with open('scores.csv', 'a', newline='') as csvfile:
-                                writer = csv.writer(csvfile)
-                                writer.writerow([output_path, score, current_time])
-
-                            # print the csv file
-                            df = pd.read_csv('scores.csv')
-                            print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
-
-
-                            # Update the global score of the miner.
-                            # This score contributes to the miner's weight in the network.
-                            # A higher weight means that the miner has been consistently responding correctly.
-                            scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
-                            
-                        except Exception as e:
-                            bt.logging.error(f"Error writing WAV file: {e}")
-                    else:
-                        bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
-
-            bt.logging.info(f"Scores: {scores}")
-            # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 10 == 0:
-                # TODO(developer): Define how the validator normalizes scores before setting weights.
-                weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
-                bt.logging.info(f"Setting weights: {weights}")
-                # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-                # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-                result = subtensor.set_weights(
-                    netuid=config.netuid,  # Subnet to set weights on.
-                    wallet=wallet,  # Wallet to sign set weights using hotkey.
-                    uids=metagraph.uids,  # Uids of the miners to set weights for.
-                    weights=weights,  # Weights to set for the miners.
-                    wait_for_inclusion=True,
+            # if there are no active miners, set active_miners to 1
+            if active_miners == 0:
+                active_miners = 1
+            # if there are less than dendrites_per_query * 3 active miners, set dendrites_per_query to active_miners / 3
+            if active_miners < total_dendrites_per_query * 3:
+                dendrites_per_query = int(active_miners / 3)
+            else:
+                dendrites_per_query = total_dendrites_per_query
+            
+            # less than 3 set to 3
+            if dendrites_per_query < minimum_dendrites_per_query:
+                    dendrites_per_query = minimum_dendrites_per_query
+            # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
+            zipped_uids = list(zip(uids, queryable_uids))
+            filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
+            bt.logging.info(f"filtered_uids:{filtered_uids}")
+            dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
+            bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
+                
+                        
+            # every 2 minutes, query the miners
+            try:
+                # Filter metagraph.axons by indices saved in dendrites_to_query list
+                filtered_axons = [metagraph.axons[i] for i in dendrites_to_query]
+                bt.logging.info(f"filtered_axons: {filtered_axons}")
+                
+                # Broadcast a GET_DATA query to filtered miners on the network.
+                random_prompt = random.choice(prompts)
+                responses = dendrite.query(
+                    filtered_axons,
+                    template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
+                    deserialize=True,
+                    timeout=60,
                 )
-                if result:
-                    bt.logging.success("Successfully set weights.")
-                else:
-                    bt.logging.error("Failed to set weights.")
 
-            # End the current step and prepare for the next iteration.
-            step += 1
-            # Resync our local state with the latest state from the blockchain.
-            metagraph = subtensor.metagraph(config.netuid)
-            # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            time.sleep(bt.__blocktime__)
+                # Filter responses to include only those from active miners
+                active_responses = [resp for resp, is_active in zip(responses, queryable_uids) if is_active]
 
-        # If we encounter an unexpected error, log it for debugging.
-        except RuntimeError as e:
-            bt.logging.error(e)
-            traceback.print_exc()
+                # # Continue processing with active_responses
+                # for i, resp_i in enumerate(active_responses[:-1]):
+                #     # Rest of your processing logic here
+                #     # ...
+
+
+
+                # TODO(developer): Define how the validator scores responses.
+                # Adjust the scores based on responses from miners.
+                for i, resp_i in enumerate(active_responses[:-1]): # The last response is the dendrite's own response - x3r!
+                    if isinstance(resp_i, template.protocol.TextToSpeech):
+                        #The response has been deserialized into the expected class
+                        # Now you can access its properties
+                        text_input = resp_i.text_input
+
+                        # Check if speech_output is not None before processing
+                        speech_output = resp_i.speech_output
+                        if speech_output is not None:
+                            try:
+                                # Convert the list to a tensor
+                                speech_tensor = torch.Tensor(speech_output)
+                                # Normalize the speech data
+                                audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
+                                # Convert to 32-bit PCM
+                                audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+                                # Add an extra dimension to make it a 2D tensor
+                                audio_data_int = audio_data_int.unsqueeze(0)
+                                # Save the audio data as a .wav file
+                                output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
+                                # set model sampling rate to 24000 if the model is Suno Bark
+                                if resp_i.model_name == "suno/bark":
+                                    torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                                else:
+                                    torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                                # wavfile.write(output_path, sampling_rate, audio_tensor)
+                                score = template.reward.score(output_path, text_input)
+                                # Get the current time
+                                current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                                # Append the score, time, and filename to the CSV file
+                                with open('scores.csv', 'a', newline='') as csvfile:
+                                    writer = csv.writer(csvfile)
+                                    writer.writerow([output_path, score, current_time])
+
+                                # print the csv file
+                                df = pd.read_csv('scores.csv')
+                                print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
+
+
+                                # Update the global score of the miner.
+                                # This score contributes to the miner's weight in the network.
+                                # A higher weight means that the miner has been consistently responding correctly.
+                                scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                                
+                            except Exception as e:
+                                bt.logging.error(f"Error writing WAV file: {e}")
+                        else:
+                            bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
+
+                bt.logging.info(f"Scores: {scores}")
+                # Periodically update the weights on the Bittensor blockchain.
+                if (step + 1) % 10 == 0:
+                    # TODO(developer): Define how the validator normalizes scores before setting weights.
+                    weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
+                    bt.logging.info(f"Setting weights: {weights}")
+                    # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+                    # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+                    result = subtensor.set_weights(
+                        netuid=config.netuid,  # Subnet to set weights on.
+                        wallet=wallet,  # Wallet to sign set weights using hotkey.
+                        uids=metagraph.uids,  # Uids of the miners to set weights for.
+                        weights=weights,  # Weights to set for the miners.
+                        wait_for_inclusion=True,
+                    )
+                    if result:
+                        bt.logging.success("Successfully set weights.")
+                    else:
+                        bt.logging.error("Failed to set weights.")
+
+                # End the current step and prepare for the next iteration.
+                step += 1
+                # Resync our local state with the latest state from the blockchain.
+                metagraph = subtensor.metagraph(config.netuid)
+                # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
+                time.sleep(bt.__blocktime__)
+
+            except Exception as e:
+                bt.logging.error(f"Error querying or processing responses: {e}")
+                traceback.print_exc()
+
 
         # If the user interrupts the program, gracefully exit.
         except KeyboardInterrupt:
