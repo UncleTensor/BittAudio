@@ -251,14 +251,6 @@ def main(config):
                 # Filter responses to include only those from active miners
                 active_responses = [resp for resp, is_active in zip(responses, queryable_uids) if is_active]
 
-                # # Continue processing with active_responses
-                # for i, resp_i in enumerate(active_responses[:-1]):
-                #     # Rest of your processing logic here
-                #     # ...
-
-
-
-                # TODO(developer): Define how the validator scores responses.
                 # Adjust the scores based on responses from miners.
                 for i, resp_i in enumerate(active_responses[:-1]): # The last response is the dendrite's own response - x3r!
                     if isinstance(resp_i, template.protocol.TextToSpeech):
@@ -311,7 +303,7 @@ def main(config):
 
                 bt.logging.info(f"Scores: {scores}")
                 # Periodically update the weights on the Bittensor blockchain.
-                if (step + 1) % 10 == 0:
+                if (step + 1) % 4 == 0: 
                     # TODO(developer): Define how the validator normalizes scores before setting weights.
                     weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
                     bt.logging.info(f"Setting weights: {weights}")
