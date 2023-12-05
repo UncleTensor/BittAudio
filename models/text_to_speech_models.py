@@ -64,6 +64,8 @@ class TextToSpeechModels:
         # Initialize SpeakerRecognizer
         self.speaker_recognizer = SpeakerRecognizer()
 
+        # Move models to GPU if available
+        self.device = torch.device("cuda")
     def generate_speech(self, text_input, audio_file_path=None):
         # Process the text input
         inputs = self.processor(text=text_input, return_tensors="pt")
@@ -87,7 +89,7 @@ class SunoBark:
         #Load the processor and model
         self.processor = AutoProcessor.from_pretrained("suno/bark")
         self.model = BarkModel.from_pretrained("suno/bark")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda")
         self.model.to(self.device)
     def generate_speech(self, text_input):
         # Process the text with v2/en_speaker_6 , TODO: later to add more speakers
@@ -105,6 +107,8 @@ class EnglishTextToSpeech:
     def __init__(self):
         self.model = VitsModel.from_pretrained("facebook/mms-tts-eng")
         self.tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-eng")
+        self.device = torch.device("cuda")
+
 
     def generate_speech(self, text_input):
         inputs = self.tokenizer(text_input, return_tensors="pt")

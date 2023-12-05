@@ -5,7 +5,7 @@ import torchaudio
 
 class SpeechToTextEvaluator:
     def __init__(self, model_name="facebook/wav2vec2-base-960h"):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda"
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name).to(device) 
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
 
