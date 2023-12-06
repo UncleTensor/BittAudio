@@ -54,8 +54,7 @@ import template
 # Set the sampling rate (you can adjust this as needed)
 sampling_rate = 16000  # 16 kHz is a common choice
 
-# Define a threshold value (you can adjust this as needed)
-threshold = 0.8
+
 
 
 example_prompts = [
@@ -105,10 +104,7 @@ def get_config():
     # Parse the config (will take command-line arguments if provided)
     # To print help message, run python3 template/validator.py --help
     config = bt.config(parser)
-    # Add argument for the threshold
-    parser.add_argument(
-        "--threshold", default=0.68, type=float, help="The threshold for response scoring."
-    )
+
     # Step 3: Set up logging directory
     # Logging is crucial for monitoring and debugging purposes.
     config.full_path = os.path.expanduser(
@@ -178,14 +174,19 @@ def main(config):
 
     # Step 6: Set up initial scoring weights for validation
     bt.logging.info("Building validation weights.")
-    scores = torch.ones_like(metagraph.S, dtype=torch.float32)
+    scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
     bt.logging.info(f"Weights: {scores}")
     # Step 7: The Main Validation Loop
     bt.logging.info("Starting validator loop.")
     step = 0
 
+    curr_block = subtensor.block
     total_dendrites_per_query = 25 
     minimum_dendrites_per_query = 3 
+    last_updated_block = curr_block - (curr_block % 100)
+    last_reset_weights_block = curr_block
+    current_block = subtensor.block
+
 
     while True:
         try:
@@ -238,95 +239,112 @@ def main(config):
                 # Filter metagraph.axons by indices saved in dendrites_to_query list
                 filtered_axons = [metagraph.axons[i] for i in dendrites_to_query]
                 bt.logging.info(f"filtered_axons: {filtered_axons}")
-                
-                # Broadcast a GET_DATA query to filtered miners on the network.
-                random_prompt = random.choice(prompts)
-                responses = dendrite.query(
-                    filtered_axons,
-                    template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
-                    deserialize=True,
-                    timeout=60,
-                )
-
-                # Filter responses to include only those from active miners
-                active_responses = [resp for resp, is_active in zip(responses, queryable_uids) if is_active]
-
-                # Adjust the scores based on responses from miners.
-                for i, resp_i in enumerate(active_responses[:-1]): # The last response is the dendrite's own response - x3r!
-                    if isinstance(resp_i, template.protocol.TextToSpeech):
-                        #The response has been deserialized into the expected class
-                        # Now you can access its properties
-                        text_input = resp_i.text_input
-
-                        # Check if speech_output is not None before processing
-                        speech_output = resp_i.speech_output
-                        if speech_output is not None:
-                            try:
-                                # Convert the list to a tensor
-                                speech_tensor = torch.Tensor(speech_output)
-                                # Normalize the speech data
-                                audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
-                                # Convert to 32-bit PCM
-                                audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
-                                # Add an extra dimension to make it a 2D tensor
-                                audio_data_int = audio_data_int.unsqueeze(0)
-                                # Save the audio data as a .wav file
-                                output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
-                                # set model sampling rate to 24000 if the model is Suno Bark
-                                if resp_i.model_name == "suno/bark":
-                                    torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
-                                else:
-                                    torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
-                                # wavfile.write(output_path, sampling_rate, audio_tensor)
-                                score = template.reward.score(output_path, text_input)
-                                # Get the current time
-                                current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                                # Append the score, time, and filename to the CSV file
-                                with open('scores.csv', 'a', newline='') as csvfile:
-                                    writer = csv.writer(csvfile)
-                                    writer.writerow([output_path, score, current_time])
-
-                                # print the csv file
-                                df = pd.read_csv('scores.csv')
-                                print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
-
-
-                                # Update the global score of the miner.
-                                # This score contributes to the miner's weight in the network.
-                                # A higher weight means that the miner has been consistently responding correctly.
-                                scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
-                                
-                            except Exception as e:
-                                bt.logging.error(f"Error writing WAV file: {e}")
-                        else:
-                            bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
-
-                bt.logging.info(f"Scores: {scores}")
-                # Periodically update the weights on the Bittensor blockchain.
-                if (step + 1) % 4 == 0: 
-                    # TODO(developer): Define how the validator normalizes scores before setting weights.
-                    weights = torch.nn.functional.normalize(scores, p=1.0, dim=0)
-                    bt.logging.info(f"Setting weights: {weights}")
-                    # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-                    # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-                    result = subtensor.set_weights(
-                        netuid=config.netuid,  # Subnet to set weights on.
-                        wallet=wallet,  # Wallet to sign set weights using hotkey.
-                        uids=metagraph.uids,  # Uids of the miners to set weights for.
-                        weights=weights,  # Weights to set for the miners.
-                        wait_for_inclusion=True,
+                if step % 4 == 0: # 
+                    bt.logging.info(f"Querying dendrites: {filtered_axons}")
+                    # Broadcast a GET_DATA query to filtered miners on the network.
+                    random_prompt = random.choice(prompts)
+                    responses = dendrite.query(
+                        filtered_axons,
+                        template.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
+                        deserialize=True,
+                        timeout=60,
                     )
-                    if result:
-                        bt.logging.success("Successfully set weights.")
-                    else:
-                        bt.logging.error("Failed to set weights.")
+
+
+                    # Adjust the scores based on responses from miners.
+                    for i, resp_i in enumerate(responses): 
+                        if isinstance(resp_i, template.protocol.TextToSpeech):
+                            #The response has been deserialized into the expected class
+                            # Now you can access its properties
+                            text_input = resp_i.text_input
+
+                            # Check if speech_output is not None before processing
+                            speech_output = resp_i.speech_output
+                            if speech_output is not None:
+                                try:
+                                    # Convert the list to a tensor
+                                    speech_tensor = torch.Tensor(speech_output)
+                                    # Normalize the speech data
+                                    audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
+                                    # Convert to 32-bit PCM
+                                    audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+                                    # Add an extra dimension to make it a 2D tensor
+                                    audio_data_int = audio_data_int.unsqueeze(0)
+                                    # Save the audio data as a .wav file
+                                    output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
+                                    # set model sampling rate to 24000 if the model is Suno Bark
+                                    if resp_i.model_name == "suno/bark":
+                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                                    else:
+                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                                    # wavfile.write(output_path, sampling_rate, audio_tensor)
+                                    score = template.reward.score(output_path, text_input)
+                                    # Get the current time
+                                    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                                    # Append the score, time, and filename to the CSV file
+                                    with open('scores.csv', 'a', newline='') as csvfile:
+                                        writer = csv.writer(csvfile)
+                                        writer.writerow([output_path, score, current_time])
+
+                                    # print the csv file
+                                    df = pd.read_csv('scores.csv')
+                                    print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
+
+
+                                    # Update the global score of the miner.
+                                    # This score contributes to the miner's weight in the network.
+                                    # A higher weight means that the miner has been consistently responding correctly.
+                                    scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                                    
+                                except Exception as e:
+                                    bt.logging.error(f"Error writing WAV file: {e}")
+                            else:
+                                bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
+
+                    bt.logging.info(f"Scores: {scores}")
+                    
+                    current_block = subtensor.block
+                    if current_block - last_updated_block > 100:
+                        
+                        weights = scores / torch.sum(scores)
+                        bt.logging.info(f"Setting weights: {weights}")
+                        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+                        (
+                            processed_uids,
+                            processed_weights,
+                        ) = bt.utils.weight_utils.process_weights_for_netuid(
+                            uids=metagraph.uids,
+                            weights=weights,
+                            netuid=config.netuid,
+                            subtensor=subtensor
+                        )
+                        bt.logging.info(f"Processed weights: {processed_weights}")
+                        bt.logging.info(f"Processed uids: {processed_uids}")
+                        result = subtensor.set_weights(
+                            netuid = config.netuid, # Subnet to set weights on.
+                            wallet = wallet, # Wallet to sign set weights using hotkey.
+                            uids = processed_uids, # Uids of the miners to set weights for.
+                            weights = processed_weights, # Weights to set for the miners.
+                        )
+                        last_updated_block = current_block
+                        if result: bt.logging.success('Successfully set weights.')
+                        else: bt.logging.error('Failed to set weights.')
 
                 # End the current step and prepare for the next iteration.
                 step += 1
+
+                if last_reset_weights_block + 1800 < current_block:
+                    bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
+                    last_reset_weights_block = current_block
+
+                
+                    # set all nodes without ips set to 0
+                    scores = scores * torch.Tensor([metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in metagraph.uids])
+                    
                 # Resync our local state with the latest state from the blockchain.
                 metagraph = subtensor.metagraph(config.netuid)
                 # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-                time.sleep(bt.__blocktime__)
+                time.sleep(bt.__blocktime__  * 10)
 
             except Exception as e:
                 bt.logging.error(f"Error querying or processing responses: {e}")

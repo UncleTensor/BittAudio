@@ -3492,7 +3492,7 @@ def calculate_audio_quality_scores(data):
         data['composite_score'] += data[metric] * weight
 
     # Debugging print statement
-    print("Composite scores calculated:", data['composite_score'])
+    # print("Composite scores calculated:", data['composite_score'])
 
     # Return the DataFrame with the composite score
     return data[['deg', 'model', 'composite_score']]
@@ -3543,5 +3543,5 @@ def score(file, text) -> float:
     nisqa.predict()
     data = pd.read_csv('NISQA_results.csv')
     score_data = calculate_audio_quality_scores(data)
-    return 1.0 if score_data['composite_score'].iloc[0] * (1.0 - word_error_rate /100 ) >= 0.68 else 0.0
+    return score_data['composite_score'].iloc[0] * (1.0 - word_error_rate /100 )
 
