@@ -297,7 +297,8 @@ def main(config):
                                     # Update the global score of the miner.
                                     # This score contributes to the miner's weight in the network.
                                     # A higher weight means that the miner has been consistently responding correctly.
-                                    scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                                    uid_index = uids.index(filtered_axons[i].uid)
+                                    scores[uid_index] = config.alpha * scores[uid_index] + (1 - config.alpha) * score
                                     
                                 except Exception as e:
                                     bt.logging.error(f"Error writing WAV file: {e}")
