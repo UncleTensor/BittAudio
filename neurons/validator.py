@@ -275,10 +275,13 @@ def main(config):
                                     # set model sampling rate to 24000 if the model is Suno Bark
                                     if resp_i.model_name == "suno/bark":
                                         torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                                        print(f"Saved audio file to suno/bark -----{output_path}")
                                     else:
                                         torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                                        print(f"Saved audio file to {output_path}")
                                     # wavfile.write(output_path, sampling_rate, audio_tensor)
                                     score = template.reward.score(output_path, text_input)
+                                    bt.logging.info(f"Score after saving the file -------------- : {score}")
                                     # Get the current time
                                     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
                                     # Append the score, time, and filename to the CSV file
