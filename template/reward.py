@@ -3376,7 +3376,7 @@ class nisqaModel(object):
             if unexpected_keys:
                 print('unexpected_keys:')
                 print(unexpected_keys)        
-            
+
     def _getDevice(self):
         '''
         Train on GPU if available.
@@ -3514,7 +3514,7 @@ def score(file, text) -> float:
     output_dir = './'  # e.g., 'results/'
     csv_file = 'results.csv'  # e.g., 'data.csv'
     csv_deg = 'column_in_csv_with_files_name'  # e.g., 'filename'
-    num_workers = 0
+    num_workers = 10
     bs = 1
     ms_channel = None  # or the specific channel if stereo file
 
