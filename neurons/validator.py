@@ -252,7 +252,7 @@ def main(config):
 
 
                     # Adjust the scores based on responses from miners.
-                    for i, resp_i in enumerate(responses): 
+                    for iax, resp_i in zip(filtered_axons, responses): 
                         if isinstance(resp_i, template.protocol.TextToSpeech):
                             #The response has been deserialized into the expected class
                             # Now you can access its properties
@@ -271,7 +271,7 @@ def main(config):
                                     # Add an extra dimension to make it a 2D tensor
                                     audio_data_int = audio_data_int.unsqueeze(0)
                                     # Save the audio data as a .wav file
-                                    output_path = os.path.join('/tmp', f'output_{metagraph.axons[i].hotkey}.wav')
+                                    output_path = os.path.join('/tmp', f'output_{iax.hotkey}.wav')
                                     # set model sampling rate to 24000 if the model is Suno Bark
                                     if resp_i.model_name == "suno/bark":
                                         torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
@@ -293,13 +293,12 @@ def main(config):
                                     df = pd.read_csv('scores.csv')
                                     print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
 
-                                    # delete the file after printing
-                                    os.remove(output_path)
-
                                     # Update the global score of the miner.
                                     # This score contributes to the miner's weight in the network.
                                     # A higher weight means that the miner has been consistently responding correctly.
-                                    scores[i] = config.alpha * scores[i] + (1 - config.alpha) * score
+                                    zipped_uids = list(zip(uids, metagraph.axons))
+                                    uid_index = list(zip(*filter(lambda x: x[1] == iax, zipped_uids)))[0][0]
+                                    scores[uid_index] = config.alpha * scores[uid_index] + (1 - config.alpha) * score
                                     
                                 except Exception as e:
                                     bt.logging.error(f"Error writing WAV file: {e}")
