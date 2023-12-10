@@ -76,7 +76,8 @@ class TextToSpeechModels:
         else:
             # Use default embeddings if no audio file is provided
             embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-            speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+            random_integer = torch.randint(0, 7307, (1,)).item()
+            speaker_embeddings = torch.tensor(embeddings_dataset[random_integer]["xvector"]).unsqueeze(0)
 
         # Generate speech
         speech = self.model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=self.vocoder)
@@ -90,10 +91,12 @@ class SunoBark:
         self.processor = AutoProcessor.from_pretrained("suno/bark")
         self.model = BarkModel.from_pretrained("suno/bark")
         self.device = torch.device("cuda")
+        self.speaker_list = ["v2/en_speaker_0","v2/en_speaker_1","v2/en_speaker_2","v2/en_speaker_3","v2/en_speaker_4","v2/en_speaker_5","v2/en_speaker_6","v2/en_speaker_7","v2/en_speaker_8","v2/en_speaker_9"]
         self.model.to(self.device)
     def generate_speech(self, text_input):
-        # Process the text with v2/en_speaker_6 , TODO: later to add more speakers
-        inputs = self.processor(text_input, voice_preset="v2/en_speaker_6", return_tensors="pt")
+        # Process the text wit speaker
+        speaker = self.speaker_list[torch.multinomial(torch.ones(len(self.speaker_list)), 1).item()]
+        inputs = self.processor(text_input, voice_preset= speaker, return_tensors="pt")
 
         # Move inputs to the same device as model
         inputs = {k: v.to(self.device) for k, v in inputs.items()}

@@ -48,7 +48,7 @@ docker compose up --detach
 ```
 
 **Evaluation Mechanism:**
-The evaluation mechanism involves the validator querying miners on the network with random prompts and receiving text-to-speech responses. These responses are scored based on correctness, and the weights on the Bittensor network are updated accordingly. The scoring is conducted using a reward function from the template module.
+The evaluation mechanism involves the validator querying miners on the network with random prompts and receiving text-to-speech responses. These responses are scored based on correctness, and the weights on the Bittensor network are updated accordingly. The scoring is conducted using a reward function from the lib module.
 
 **Miner/Validator Hardware Specs:**
 The hardware requirements for miners and validators vary depending on the complexity and resource demands of the selected text-to-speech models. Typically, a machine equipped with a capable CPU and GPU, along with sufficient VRAM and RAM, is necessary. The amount of disk space required will depend on the size of the models and any additional data.
@@ -106,7 +106,6 @@ python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> -
 |                                 | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
 |                                 | `--netuid`                           | Testnet: 31 ; Mainnet: 16                          | The chain subnet UID.                                                                                                 |
 |                                 | `--hub_key`                          | None                       | Supply the Huggingface Hub API key for the prompt dataset.                                                            |
-|                                 | `--threshold`                        | 0.68                       | The threshold for response scoring.                                                                                   |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |

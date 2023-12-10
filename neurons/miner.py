@@ -17,7 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# Bittensor Miner Template:
+# Bittensor Miner lib:
 # TODO(developer): Rewrite based on protocol and validator defintion.
 
 # Step 1: Import necessary libraries and modules
@@ -33,23 +33,28 @@ import wave
 import time
 import sys
 import os
-# Adjust the path to include the directory where 'template' is located
-# Get the directory of the current script
-current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Construct the absolute path
-ttv = os.path.abspath(os.path.join(current_script_dir, "AudioSubnet"))
+# Set the project root path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-# Check if the path is already in sys.path
-if ttv not in sys.path:
-    # Insert it at the beginning of the sys.path list
-    sys.path.insert(0, ttv)
+# Set the 'AudioSubnet' directory path
+audio_subnet_path = os.path.abspath(project_root)
 
+# Add the project root and 'AudioSubnet' directories to sys.path
+sys.path.insert(0, project_root)
+sys.path.insert(0, audio_subnet_path)
+
+# Print current working directory and directories in sys.path
+print("Current working directory:", os.getcwd())
+print("Directories in sys.path:", sys.path)
+
+# Print the contents of 'AudioSubnet' directory
+print("Contents of 'audiosubnet':", os.listdir(audio_subnet_path))
 # import this repo
 from models.text_to_speech_models import TextToSpeechModels
 from models.text_to_speech_models import SunoBark
 from models.text_to_speech_models import EnglishTextToSpeech
-import template
+import lib
 
 
 
@@ -76,7 +81,7 @@ def get_config():
     # Adds axon specific arguments i.e. --axon.port ...
     bt.axon.add_args(parser)
     # Activating the parser to read any command-line inputs.
-    # To print help message, run python3 template/miner.py --help
+    # To print help message, run python3 lib/miner.py --help
     config = bt.config(parser)
 
     # Step 3: Set up logging directory
@@ -162,7 +167,7 @@ def main(config):
     # Step 5: Set up miner functionalities
     # The following functions control the miner's response to incoming requests.
     # The blacklist function decides if a request should be ignored.
-    def speech_blacklist_fn(synapse: template.protocol.TextToSpeech) -> typing.Tuple[bool, str]:
+    def speech_blacklist_fn(synapse: lib.protocol.TextToSpeech) -> typing.Tuple[bool, str]:
         # TODO(developer): Define how miners should blacklist requests. This Function
         # Runs before the synapse data has been deserialized (i.e. before synapse.data is available).
         # The synapse is instead contructed via the headers of the request. It is important to blacklist
@@ -186,7 +191,7 @@ def main(config):
 
     # The priority function determines the order in which requests are handled.
     # More valuable or higher-priority requests are processed before others.
-    def speech_priority_fn(synapse: template.protocol.TextToSpeech) -> float:
+    def speech_priority_fn(synapse: lib.protocol.TextToSpeech) -> float:
         # TODO(developer): Define how miners should prioritize requests.
         # Miners may recieve messages from multiple entities at once. This function
         # determines which request should be processed first. Higher values indicate
@@ -203,7 +208,7 @@ def main(config):
         return prirority
 
     # This is the core miner function, which decides the miner's response to a valid, high-priority request.
-    def ProcessSpeech(synapse: template.protocol.TextToSpeech) -> template.protocol.TextToSpeech:
+    def ProcessSpeech(synapse: lib.protocol.TextToSpeech) -> lib.protocol.TextToSpeech:
         bt.logging.debug("The prompt recieved from validator!")
         # Here we use the models class to generate the speech
         speech = tts_models.generate_speech(synapse.text_input)
