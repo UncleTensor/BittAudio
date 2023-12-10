@@ -242,6 +242,8 @@ class BittensorValidator:
 
                                         df = pd.read_csv('scores.csv')
                                         print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
+                                        #delete the csv file after printing the table
+                                        os.remove('scores.csv')
 
                                         zipped_uids = list(zip(uids, self.metagraph.axons))
                                         uid_index = list(zip(*filter(lambda x: x[1] == iax, zipped_uids)))[0][0]
