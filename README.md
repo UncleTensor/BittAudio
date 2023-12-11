@@ -40,12 +40,10 @@ pip install -r requirements.txt
 python -m pip install -e . 
 ```
 
-## Run a Subtensor instance:
-```bash 
-git clone https://github.com/opentensor/subtensor.git
-cd subtensor
-docker compose up --detach
-```
+## Recommended GPU Configuration
+
+For optimal performance, it is recommended to use NVIDIA GeForce RTX 3090 GPUs for both Validators and Miners.
+
 
 **Evaluation Mechanism:**
 The evaluation mechanism involves the validator querying miners on the network with random prompts and receiving text-to-speech responses. These responses are scored based on correctness, and the weights on the Bittensor network are updated accordingly. The scoring is conducted using a reward function from the lib module.
