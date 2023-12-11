@@ -254,7 +254,6 @@ def main(config):
                 del new_scores
             # If there are less uids than scores, remove some weights.
             queryable_uids = (metagraph.total_stake >= 0)
-            bt.logging.info(f"queryable_uids:{queryable_uids}")
             
             # Remove the weights of miners that are not queryable.
             queryable_uids = queryable_uids * torch.Tensor([metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
@@ -285,7 +284,6 @@ def main(config):
             try:
                 # Filter metagraph.axons by indices saved in dendrites_to_query list
                 filtered_axons = [metagraph.axons[i] for i in dendrites_to_query]
-                bt.logging.info(f"filtered_axons: {filtered_axons}")
                 if step % 2 == 0: # 
                     bt.logging.info(f"Querying dendrites: {filtered_axons}")
                     # Broadcast a GET_DATA query to filtered miners on the network.
