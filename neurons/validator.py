@@ -205,7 +205,7 @@ class BittensorValidator:
                 # Query dendrites for responses to prompts and score them using the reward module 
                 try:
                     filtered_axons = [self.metagraph.axons[i] for i in dendrites_to_query]
-                    if step % 5 == 0:
+                    if step % 1 == 0:
                         random_prompt = random.choice(self.prompts)
                         responses = self.dendrite.query(
                             filtered_axons,
@@ -300,7 +300,7 @@ class BittensorValidator:
                         self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
 
                     self.metagraph = self.subtensor.metagraph(self.config.netuid)
-                    time.sleep(bt.__blocktime__ * 10)
+                    time.sleep(bt.__blocktime__ * 5)
 
                 except Exception as e:
                     bt.logging.error(f"Error querying or processing responses: {e}")
