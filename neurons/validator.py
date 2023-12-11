@@ -265,7 +265,7 @@ class BittensorValidator:
 
                         current_block = self.subtensor.block
                         # Update weights every 100 blocks
-                        if current_block - last_updated_block > 100:
+                        if current_block - last_updated_block > 50:
                             weights = self.scores / torch.sum(self.scores)
                             bt.logging.info(f"Setting weights: {weights}")
 
