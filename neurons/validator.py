@@ -52,10 +52,8 @@ print("Contents of 'AudioSubnet':", os.listdir(audio_subnet_path))
 # Import your module
 import lib
 import traceback
-#Define the BittensorValidator class
-class BittensorValidator:
-    # List of prompts to be used for validation
-    example_prompts = [
+
+example_prompts = [
     "Can you tell me a joke that will make me laugh?",
     "Describe your favorite place to go on vacation.",
     "If you could have dinner with any historical figure, who would it be and why?",
@@ -131,210 +129,31 @@ class BittensorValidator:
     "What is your favorite type of movie or film genre?",
     "If you could have any animal as a companion, what would it be?",
     "Tell me about a mentor or role model who has influenced your life."]
-
-    def __init__(self, config):
-        self.config = config
-        self.prompts = self._load_prompts()
-        self.step = 0
-
-    #load prompts from the dataset if the hub key is provided, otherwise use the example prompts
-    def _load_prompts(self):
-        if self.config.hub_key:
-            gs_dev = load_dataset("speechcolab/gigaspeech", "dev", use_auth_token=self.config.hub_key)
-            return gs_dev['validation']['text']
-        else:
-            return BittensorValidator.example_prompts
-    #initialize logging for the validator 
-    def _initialize_logging(self):
-        bt.logging(config=self.config, logging_dir=self.config.full_path)
-        bt.logging.info(
-            f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.chain_endpoint} with config:"
-        )
-        bt.logging.info(self.config)
-    #initialize wallet, subtensor, dendrite, and metagraph objects 
-    def _initialize_objects(self):
-        self.wallet = bt.wallet(config=self.config)
-        self.subtensor = bt.subtensor(config=self.config)
-        self.dendrite = bt.dendrite(wallet=self.wallet)
-        self.metagraph = self.subtensor.metagraph(self.config.netuid)
-    #connect to the network and check if the wallet is registered to the chain connection
-    def _connect_to_network(self):
-        if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
-            bt.logging.error(
-                f"\nYour validator: {self.wallet} if not registered to chain connection: {self.subtensor} \nRun btcli register and try again."
-            )
-            exit()
-    #initialize weights for each dendrite in the metagraph 
-    def _initialize_weights(self):
-        self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-    #prompts will be randomly selected from the list of prompts and sent to the dendrites for processing and response generation 
-    def _handle_prompt(self, step=0, current_block=None, last_updated_block=None, last_reset_weights_block=None):
-        while True:
-            try:
-                self.metagraph.sync(subtensor=self.subtensor)
-                bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
-
-                uids = self.metagraph.uids.tolist()
-                if len(uids) > len(self.scores):
-                    size_difference = len(uids) - len(self.scores)
-                    new_scores = torch.zeros(size_difference, dtype=torch.float32)
-                    self.scores = torch.cat((self.scores, new_scores))
-                    del new_scores
-
-                queryable_uids = (self.metagraph.total_stake >= 0)
-                queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
-                active_miners = torch.sum(queryable_uids)
-                dendrites_per_query = 25
-                minimum_dendrites = 3
-
-                if active_miners == 0:
-                    active_miners = 1
-
-                if active_miners < 25 * 3:
-                    dendrites_per_query = int(active_miners / 3)
-                else:
-                    dendrites_per_query = 25
-
-                if dendrites_per_query < minimum_dendrites:
-                    dendrites_per_query = minimum_dendrites
-
-                zipped_uids = list(zip(uids, queryable_uids))
-                filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
-                dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
-                bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
-                # Query dendrites for responses to prompts and score them using the reward module 
-                try:
-                    filtered_axons = [self.metagraph.axons[i] for i in dendrites_to_query]
-                    if step % 1 == 0:
-                        random_prompt = random.choice(self.prompts)
-                        responses = self.dendrite.query(
-                            filtered_axons,
-                            lib.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
-                            deserialize=True,
-                            timeout=60,
-                        )
-
-                        for iax, resp_i in zip(filtered_axons, responses):
-                            if isinstance(resp_i, lib.protocol.TextToSpeech):
-                                text_input = resp_i.text_input
-                                speech_output = resp_i.speech_output
-                                if speech_output is not None:
-                                    try:
-                                        speech_tensor = torch.Tensor(speech_output)
-                                        audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
-                                        audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
-                                        audio_data_int = audio_data_int.unsqueeze(0)
-                                        output_path = os.path.join('/tmp', f'output_{iax.hotkey}.wav')
-                                        # Check if any WAV file with .wav extension exists and delete it
-                                        existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
-                                        for existing_file in existing_wav_files:
-                                            try:
-                                                os.remove(os.path.join('/tmp', existing_file))
-                                            except Exception as e:
-                                                bt.logging.error(f"Error deleting existing WAV file: {e}")
-                                        if resp_i.model_name == "suno/bark":
-                                            torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
-                                            print(f"Saved audio file to suno/bark -----{output_path}")
-                                        else:
-                                            torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
-                                            print(f"Saved audio file to {output_path}")
-                                        score = lib.reward.score(output_path, text_input)
-                                        bt.logging.info(f"Score : {score}")
-                                        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                                        with open('scores.csv', 'a', newline='') as csvfile:
-                                            writer = csv.writer(csvfile)
-                                            writer.writerow([output_path, score, current_time])
-                                        df = pd.read_csv('scores.csv')
-                                        # make columns headers of df
-                                        df.columns = ["Files w/ Hotkey", "Score", "Time"]
-                                        # print the row if it is not empty
-                                        if not df.empty:
-                                            print(df.tail(1))
-                                        # Delete the WAV file
-                                        os.remove(output_path)
-                                        zipped_uids = list(zip(uids, self.metagraph.axons))
-                                        uid_index = list(zip(*filter(lambda x: x[1] == iax, zipped_uids)))[0][0]
-                                        self.scores[uid_index] = self.config.alpha * self.scores[uid_index] + (1 - self.config.alpha) * score
-
-                                    except Exception as e:
-                                        bt.logging.error(f"Error writing WAV file: {e}")
-                                else:
-                                    bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
-
-                        bt.logging.info(f"Scores: {self.scores}")
-
-                        current_block = self.subtensor.block
-                        # Update weights every 100 blocks
-                        if current_block - last_updated_block > 50:
-                            weights = self.scores / torch.sum(self.scores)
-                            bt.logging.info(f"Setting weights: {weights}")
-
-                            processed_uids, processed_weights = bt.utils.weight_utils.process_weights_for_netuid(
-                                uids=self.metagraph.uids,
-                                weights=weights,
-                                netuid=self.config.netuid,
-                                subtensor=self.subtensor
-                            )
-
-                            bt.logging.info(f"Processed weights: {processed_weights}")
-                            bt.logging.info(f"Processed uids: {processed_uids}")
-                            result = self.subtensor.set_weights(
-                                netuid=self.config.netuid,
-                                wallet=self.wallet,
-                                uids=processed_uids,
-                                weights=processed_weights,
-                            )
-
-                            last_updated_block = current_block
-                            if result:
-                                bt.logging.success('Successfully set weights.')
-                            else:
-                                bt.logging.error('Failed to set weights.')
-
-                    step += 1
-                    # Reset weights of validators and nodes without IPs every 1800 blocks
-                    if last_reset_weights_block + 1800 < current_block:
-                        bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
-                        last_reset_weights_block = current_block
-
-                        self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
-
-                    self.metagraph = self.subtensor.metagraph(self.config.netuid)
-                    time.sleep(bt.__blocktime__ * 5)
-
-                except Exception as e:
-                    bt.logging.error(f"Error querying or processing responses: {e}")
-                    traceback.print_exc()
-
-            except KeyboardInterrupt:
-                bt.logging.success("Keyboard interrupt detected. Exiting validator.")
-                exit()
-    #run the validator 
-    def run_validator(self):
-        self._initialize_logging()
-        self._initialize_objects()
-        self._connect_to_network()
-        self._initialize_weights()
-        current_block = self.subtensor.block
-        last_updated_block = current_block - (current_block % 100)
-        last_reset_weights_block = current_block
-        self._handle_prompt(step=self.step, current_block=current_block, last_updated_block=last_updated_block, last_reset_weights_block=last_reset_weights_block)
-
-
 def get_config():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--alpha", default=0.9, type=float, help="The weight moving average scoring."
     )
+    # TODO(developer): Adds your custom validator arguments to the parser.
     parser.add_argument(
         "--custom", default="my_custom_value", help="Adds a custom value to the parser."
     )
+    # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
+    # Supply Huggingface hub API key --hub_key default is None
     parser.add_argument("--hub_key", type=str, default=None, help="Supply the Huggingface Hub API key for prompt dataset")
+    # Adds subtensor specific arguments i.e. --subtensor.chain_endpoint ... --subtensor.network ...
     bt.subtensor.add_args(parser)
+    # Adds logging specific arguments i.e. --logging.debug ..., --logging.trace .. or --logging.logging_dir ...
     bt.logging.add_args(parser)
+    # Adds wallet specific arguments i.e. --wallet.name ..., --wallet.hotkey ./. or --wallet.path ...
     bt.wallet.add_args(parser)
+    # Parse the config (will take command-line arguments if provided)
+    # To print help message, run python3 template/validator.py --help
     config = bt.config(parser)
+
+    # Step 3: Set up logging directory
+    # Logging is crucial for monitoring and debugging purposes.
     config.full_path = os.path.expanduser(
         "{}/{}/{}/netuid{}/{}".format(
             config.logging.logging_dir,
@@ -344,11 +163,267 @@ def get_config():
             "validator",
         )
     )
+    # Ensure the logging directory exists.
     if not os.path.exists(config.full_path):
         os.makedirs(config.full_path, exist_ok=True)
+
+    # Return the parsed config.
     return config
 
+
+def main(config):
+    # Set up logging with the provided configuration and directory.
+    bt.logging(config=config, logging_dir=config.full_path)
+    bt.logging.info(
+        f"Running validator for subnet: {config.netuid} on network: {config.subtensor.chain_endpoint} with config:"
+    )
+    # Log the configuration for reference.
+    bt.logging.info(config)
+
+    # Step 4: Build Bittensor validator objects
+    # These are core Bittensor classes to interact with the network.
+    bt.logging.info("Setting up bittensor objects.")
+
+    if config.hub_key:
+        # Load the dataset from Hugging Face using the API key
+        gs_dev = load_dataset("speechcolab/gigaspeech", "dev", use_auth_token=config.hub_key)
+        prompts = gs_dev['validation']['text']
+    else:
+        # Use the example prompts if no API key is provided
+        prompts = example_prompts
+
+    # The wallet holds the cryptographic key pairs for the validator.
+    wallet = bt.wallet(config=config)
+    bt.logging.info(f"Wallet: {wallet}")
+
+    # The subtensor is our connection to the Bittensor blockchain.
+    subtensor = bt.subtensor(config=config)
+    bt.logging.info(f"Subtensor: {subtensor}")
+
+    # Dendrite is the RPC client; it lets us send messages to other nodes (axons) in the network.
+    dendrite = bt.dendrite(wallet=wallet)
+    bt.logging.info(f"Dendrite: {dendrite}")
+
+    # The metagraph holds the state of the network, letting us know about other validators and miners.
+    metagraph = subtensor.metagraph(config.netuid)
+    bt.logging.info(f"Metagraph: {metagraph}")
+
+    # Step 5: Connect the validator to the network
+    if wallet.hotkey.ss58_address not in metagraph.hotkeys:
+        bt.logging.error(
+            f"\nYour validator: {wallet} if not registered to chain connection: {subtensor} \nRun btcli register and try again."
+        )
+        exit()
+
+    # Each validator gets a unique identity (UID) in the network for differentiation.
+    my_subnet_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+    bt.logging.info(f"Running validator on uid: {my_subnet_uid}")
+
+    # Step 6: Set up initial scoring weights for validation
+    bt.logging.info("Building validation weights.")
+    scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
+    bt.logging.info(f"Weights: {scores}")
+    # Step 7: The Main Validation Loop
+    bt.logging.info("Starting validator loop.")
+    step = 0
+
+    curr_block = subtensor.block
+    total_dendrites_per_query = 25 
+    minimum_dendrites_per_query = 3 
+    last_updated_block = curr_block - (curr_block % 100)
+    last_reset_weights_block = curr_block
+    current_block = subtensor.block
+
+
+    while True:
+        try:
+            # Per 10 blocks, sync the subtensor state with the blockchain.
+            if step % 5 == 0:
+                metagraph.sync(subtensor = subtensor)
+                bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
+
+            # If the metagraph has changed, update the weights.
+            # Get the uids of all miners in the network.
+            uids = metagraph.uids.tolist()
+            # If there are more uids than scores, add more weights.
+            if len(uids) > len(scores):
+                bt.logging.trace("Adding more weights")
+                size_difference = len(uids) - len(scores)
+                new_scores = torch.zeros(size_difference, dtype=torch.float32)
+                scores = torch.cat((scores, new_scores))
+                del new_scores
+            # If there are less uids than scores, remove some weights.
+            queryable_uids = (metagraph.total_stake >= 0)
+            bt.logging.info(f"queryable_uids:{queryable_uids}")
+            
+            # Remove the weights of miners that are not queryable.
+            queryable_uids = queryable_uids * torch.Tensor([metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+            active_miners = torch.sum(queryable_uids)
+            dendrites_per_query = total_dendrites_per_query
+
+            # if there are no active miners, set active_miners to 1
+            if active_miners == 0:
+                active_miners = 1
+            # if there are less than dendrites_per_query * 3 active miners, set dendrites_per_query to active_miners / 3
+            if active_miners < total_dendrites_per_query * 3:
+                dendrites_per_query = int(active_miners / 3)
+            else:
+                dendrites_per_query = total_dendrites_per_query
+            
+            # less than 3 set to 3
+            if dendrites_per_query < minimum_dendrites_per_query:
+                    dendrites_per_query = minimum_dendrites_per_query
+            # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
+            zipped_uids = list(zip(uids, queryable_uids))
+            filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
+            bt.logging.info(f"filtered_uids:{filtered_uids}")
+            dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
+            bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
+                
+                        
+            # every 2 minutes, query the miners
+            try:
+                # Filter metagraph.axons by indices saved in dendrites_to_query list
+                filtered_axons = [metagraph.axons[i] for i in dendrites_to_query]
+                bt.logging.info(f"filtered_axons: {filtered_axons}")
+                if step % 2 == 0: # 
+                    bt.logging.info(f"Querying dendrites: {filtered_axons}")
+                    # Broadcast a GET_DATA query to filtered miners on the network.
+                    random_prompt = random.choice(prompts)
+                    responses = dendrite.query(
+                        filtered_axons,
+                        lib.protocol.TextToSpeech(roles=["user"], text_input=random_prompt),
+                        deserialize=True,
+                        timeout=60,
+                    )
+
+
+                    # Adjust the scores based on responses from miners.
+                    for iax, resp_i in zip(filtered_axons, responses): 
+                        if isinstance(resp_i, lib.protocol.TextToSpeech):
+                            #The response has been deserialized into the expected class
+                            # Now you can access its properties
+                            text_input = resp_i.text_input
+
+                            # Check if speech_output is not None before processing
+                            speech_output = resp_i.speech_output
+                            if speech_output is not None:
+                                try:
+                                    # Convert the list to a tensor
+                                    speech_tensor = torch.Tensor(speech_output)
+                                    # Normalize the speech data
+                                    audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
+                                    # Convert to 32-bit PCM
+                                    audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+                                    # Add an extra dimension to make it a 2D tensor
+                                    audio_data_int = audio_data_int.unsqueeze(0)
+                                    # Save the audio data as a .wav file
+                                    output_path = os.path.join('/tmp', f'output_{iax.hotkey}.wav')
+                                    # Check if any WAV file with .wav extension exists and delete it
+                                    existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
+                                    for existing_file in existing_wav_files:
+                                        try:
+                                            os.remove(os.path.join('/tmp', existing_file))
+                                        except Exception as e:
+                                            bt.logging.error(f"Error deleting existing WAV file: {e}")
+                                    # set model sampling rate to 24000 if the model is Suno Bark
+                                    if resp_i.model_name == "suno/bark":
+                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                                        print(f"Saved audio file to suno/bark -----{output_path}")
+                                    else:
+                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                                        print(f"Saved audio file to {output_path}")
+                                    # wavfile.write(output_path, sampling_rate, audio_tensor)
+                                    score = lib.reward.score(output_path, text_input)
+                                    bt.logging.info(f"Score after saving the file -------------- : {score}")
+                                    # Get the current time
+                                    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                                    # Append the score, time, and filename to the CSV file
+                                    with open('scores.csv', 'a', newline='') as csvfile:
+                                        writer = csv.writer(csvfile)
+                                        writer.writerow([output_path, score, current_time])
+
+                                    # print the csv file
+                                    df = pd.read_csv('scores.csv')
+                                    # make columns headers of df
+                                    df.columns = ["Files w/ Hotkey", "Score", "Time"]
+                                    # print the row if it is not empty
+                                    if not df.empty:
+                                        print(df.tail(1))
+                                    # Delete the WAV file
+                                    os.remove(output_path)
+
+                                    # Update the global score of the miner.
+                                    # This score contributes to the miner's weight in the network.
+                                    # A higher weight means that the miner has been consistently responding correctly.
+                                    zipped_uids = list(zip(uids, metagraph.axons))
+                                    uid_index = list(zip(*filter(lambda x: x[1] == iax, zipped_uids)))[0][0]
+                                    scores[uid_index] = config.alpha * scores[uid_index] + (1 - config.alpha) * score
+                                    
+                                except Exception as e:
+                                    bt.logging.error(f"Error writing WAV file: {e}")
+                            else:
+                                bt.logging.warning(f"Received None speech_output for prompt: {text_input}. Skipping.")
+
+                    bt.logging.info(f"Scores: {scores}")
+                    
+                    current_block = subtensor.block
+                    if current_block - last_updated_block > 100:
+                        
+                        weights = scores / torch.sum(scores)
+                        bt.logging.info(f"Setting weights: {weights}")
+                        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+                        (
+                            processed_uids,
+                            processed_weights,
+                        ) = bt.utils.weight_utils.process_weights_for_netuid(
+                            uids=metagraph.uids,
+                            weights=weights,
+                            netuid=config.netuid,
+                            subtensor=subtensor
+                        )
+                        bt.logging.info(f"Processed weights: {processed_weights}")
+                        bt.logging.info(f"Processed uids: {processed_uids}")
+                        result = subtensor.set_weights(
+                            netuid = config.netuid, # Subnet to set weights on.
+                            wallet = wallet, # Wallet to sign set weights using hotkey.
+                            uids = processed_uids, # Uids of the miners to set weights for.
+                            weights = processed_weights, # Weights to set for the miners.
+                        )
+                        last_updated_block = current_block
+                        if result: bt.logging.success('Successfully set weights.')
+                        else: bt.logging.error('Failed to set weights.')
+
+                # End the current step and prepare for the next iteration.
+                step += 1
+
+                if last_reset_weights_block + 1800 < current_block:
+                    bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
+                    last_reset_weights_block = current_block
+
+                
+                    # set all nodes without ips set to 0
+                    scores = scores * torch.Tensor([metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in metagraph.uids])
+                    
+                # Resync our local state with the latest state from the blockchain.
+                metagraph = subtensor.metagraph(config.netuid)
+                # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
+                time.sleep(bt.__blocktime__  * 5)
+
+            except Exception as e:
+                bt.logging.error(f"Error querying or processing responses: {e}")
+                traceback.print_exc()
+
+
+        # If the user interrupts the program, gracefully exit.
+        except KeyboardInterrupt:
+            bt.logging.success("Keyboard interrupt detected. Exiting validator.")
+            exit()
+
+
+# The main function parses the configuration and runs the validator.
 if __name__ == "__main__":
+    # Parse the configuration.
     config = get_config()
-    validator = BittensorValidator(config)
-    validator.run_validator()
+    # Run the main function.
+    main(config)
