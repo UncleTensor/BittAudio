@@ -77,7 +77,6 @@ python3 neurons/miner.py --netuid <subnet_uid> --wallet.name <wallet_name> --wal
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Configuration Arguments**     | `--custom`                           | "my_custom_value"          | Adds a custom value to the parser.                                                                                    |
 |                                 | `--model`                            | 'microsoft/speecht5_tts' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
 |                                 | `--netuid`                           | Testnet: 31 ; Mainnet: 16                          | The chain subnet UID.                                                                                                 |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
