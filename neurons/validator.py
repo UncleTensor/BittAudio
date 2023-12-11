@@ -52,8 +52,9 @@ print("Contents of 'AudioSubnet':", os.listdir(audio_subnet_path))
 # Import your module
 import lib
 import traceback
-
+#Define the BittensorValidator class
 class BittensorValidator:
+    # List of prompts to be used for validation
     example_prompts = [
     "Can you tell me a joke that will make me laugh?",
     "Describe your favorite place to go on vacation.",
@@ -136,37 +137,37 @@ class BittensorValidator:
         self.prompts = self._load_prompts()
         self.step = 0
 
-
+    #load prompts from the dataset if the hub key is provided, otherwise use the example prompts
     def _load_prompts(self):
         if self.config.hub_key:
             gs_dev = load_dataset("speechcolab/gigaspeech", "dev", use_auth_token=self.config.hub_key)
             return gs_dev['validation']['text']
         else:
             return BittensorValidator.example_prompts
-
+    #initialize logging for the validator 
     def _initialize_logging(self):
         bt.logging(config=self.config, logging_dir=self.config.full_path)
         bt.logging.info(
             f"Running validator for subnet: {self.config.netuid} on network: {self.config.subtensor.chain_endpoint} with config:"
         )
         bt.logging.info(self.config)
-
+    #initialize wallet, subtensor, dendrite, and metagraph objects 
     def _initialize_objects(self):
         self.wallet = bt.wallet(config=self.config)
         self.subtensor = bt.subtensor(config=self.config)
         self.dendrite = bt.dendrite(wallet=self.wallet)
         self.metagraph = self.subtensor.metagraph(self.config.netuid)
-
+    #connect to the network and check if the wallet is registered to the chain connection
     def _connect_to_network(self):
         if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
             bt.logging.error(
                 f"\nYour validator: {self.wallet} if not registered to chain connection: {self.subtensor} \nRun btcli register and try again."
             )
             exit()
-
+    #initialize weights for each dendrite in the metagraph 
     def _initialize_weights(self):
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-
+    #prompts will be randomly selected from the list of prompts and sent to the dendrites for processing and response generation 
     def _handle_prompt(self, step=0, current_block=None, last_updated_block=None, last_reset_weights_block=None):
         while True:
             try:
@@ -201,7 +202,7 @@ class BittensorValidator:
                 filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
                 dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
                 bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
-
+                # Query dendrites for responses to prompts and score them using the reward module 
                 try:
                     filtered_axons = [self.metagraph.axons[i] for i in dendrites_to_query]
                     if step % 5 == 0:
@@ -224,27 +225,33 @@ class BittensorValidator:
                                         audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
                                         audio_data_int = audio_data_int.unsqueeze(0)
                                         output_path = os.path.join('/tmp', f'output_{iax.hotkey}.wav')
-
+                                        # Check if any WAV file with .wav extension exists and delete it
+                                        existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
+                                        for existing_file in existing_wav_files:
+                                            try:
+                                                os.remove(os.path.join('/tmp', existing_file))
+                                            except Exception as e:
+                                                bt.logging.error(f"Error deleting existing WAV file: {e}")
                                         if resp_i.model_name == "suno/bark":
                                             torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
                                             print(f"Saved audio file to suno/bark -----{output_path}")
                                         else:
                                             torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
                                             print(f"Saved audio file to {output_path}")
-
                                         score = lib.reward.score(output_path, text_input)
                                         bt.logging.info(f"Score : {score}")
-
                                         current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
                                         with open('scores.csv', 'a', newline='') as csvfile:
                                             writer = csv.writer(csvfile)
                                             writer.writerow([output_path, score, current_time])
-
                                         df = pd.read_csv('scores.csv')
-                                        print(tabulate(df, ["No #", "Files w/ Hotkey", "Score", "Time"], tablefmt='psql'))
-                                        #delete the csv file after printing the table
-                                        os.remove('scores.csv')
-
+                                        # make columns headers of df
+                                        df.columns = ["Files w/ Hotkey", "Score", "Time"]
+                                        # print the row if it is not empty
+                                        if not df.empty:
+                                            print(df.tail(1))
+                                        # Delete the WAV file
+                                        os.remove(output_path)
                                         zipped_uids = list(zip(uids, self.metagraph.axons))
                                         uid_index = list(zip(*filter(lambda x: x[1] == iax, zipped_uids)))[0][0]
                                         self.scores[uid_index] = self.config.alpha * self.scores[uid_index] + (1 - self.config.alpha) * score
@@ -257,6 +264,7 @@ class BittensorValidator:
                         bt.logging.info(f"Scores: {self.scores}")
 
                         current_block = self.subtensor.block
+                        # Update weights every 100 blocks
                         if current_block - last_updated_block > 100:
                             weights = self.scores / torch.sum(self.scores)
                             bt.logging.info(f"Setting weights: {weights}")
@@ -284,7 +292,7 @@ class BittensorValidator:
                                 bt.logging.error('Failed to set weights.')
 
                     step += 1
-
+                    # Reset weights of validators and nodes without IPs every 1800 blocks
                     if last_reset_weights_block + 1800 < current_block:
                         bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
                         last_reset_weights_block = current_block
@@ -301,7 +309,7 @@ class BittensorValidator:
             except KeyboardInterrupt:
                 bt.logging.success("Keyboard interrupt detected. Exiting validator.")
                 exit()
-
+    #run the validator 
     def run_validator(self):
         self._initialize_logging()
         self._initialize_objects()
