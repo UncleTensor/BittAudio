@@ -366,7 +366,7 @@ def main(config):
                     bt.logging.info(f"Scores: {scores}")
                     
                     current_block = subtensor.block
-                    if current_block - last_updated_block > 100:
+                    if current_block - last_updated_block > 50:
                         
                         weights = scores / torch.sum(scores)
                         bt.logging.info(f"Setting weights: {weights}")
