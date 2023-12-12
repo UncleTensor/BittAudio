@@ -54,7 +54,7 @@ print("Contents of 'audiosubnet':", os.listdir(audio_subnet_path))
 from models.text_to_speech_models import TextToSpeechModels
 from models.text_to_speech_models import SunoBark
 from models.text_to_speech_models import EnglishTextToSpeech
-import lib.core
+import lib.utils
 import lib
 
 
@@ -343,7 +343,7 @@ def main(config):
             time.sleep(1)
 
             if step % 1000 == 0 and config.auto_update == "yes":
-                lib.core.update_repo()
+                lib.utils.update_repo()
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
