@@ -62,6 +62,17 @@ The code incorporates three text-to-speech models: Microsoft/speecht5_tts, Faceb
 
 In general, the resource demands of text-to-speech models can vary significantly. Larger models often necessitate more powerful GPUs and additional system resources. It is advisable to consult the documentation or model repository for the specific requirements of each model. Additionally, if GPU acceleration is employed, having a compatible GPU with enough VRAM is typically advantageous for faster processing.
 
+## Auto-Update Feature
+
+The Auto-Update feature in the Audio Subnetwork ensures that the software components, including text-to-speech models and other dependencies, remain up-to-date with the latest improvements and bug fixes. This feature is designed to:
+
+1. **Automatically Check for Updates:** Periodically scans for new updates or patches available in the repository.
+2. **Seamless Integration:** Integrates updates without disrupting ongoing processes or requiring manual intervention.
+3. **Enhanced Security and Performance:** By keeping the software up-to-date, it ensures enhanced security and optimal performance.
+4. **User Notification:** Notifies users about the updates being installed, allowing them to be aware of the changes and improvements.
+
+To enable this feature, ensure you `--auto_update` argument with the value `yes`
+
 Below are instructions for using the arguments in `miner.py` and `validator.py`:
 
 ### Instructions for `miner.py`:
@@ -86,6 +97,7 @@ python3 neurons/miner.py --netuid <subnet_uid> --wallet.name <wallet_name> --wal
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 |                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
 | **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.                                                                                    |
+| **Auto Update Argument**       | `--auto_update`                        | yes                          | Updates the repository                                                                                     |
 
 
 ### Instructions for `validator.py`:
@@ -111,4 +123,6 @@ python3 neurons/validator.py --netuid <subnet_uid> --wallet.name <wallet_name> -
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 |                                 | `--wallet.path`                      | -                          | Path to the wallet.                                                                                                  |
+| **Auto Update Argument**       | `--auto_update`                        | yes                          | Updates the repository                                                                                     |
+
 
