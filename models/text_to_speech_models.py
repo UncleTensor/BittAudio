@@ -76,7 +76,7 @@ class TextToSpeechModels:
         else:
             # Use default embeddings if no audio file is provided
             embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-            random_integer = torch.randint(0, 7307, (1,)).item()
+            random_integer = torch.randint(0, 7931, (1,)).item()
             speaker_embeddings = torch.tensor(embeddings_dataset[random_integer]["xvector"]).unsqueeze(0)
 
         # Generate speech

@@ -3463,14 +3463,16 @@ class nisqaModel(object):
             raise ValueError('selected tr_checkpoint option not available')
 
 
+
 def calculate_audio_quality_scores(data):
     # Define the weights for each metric
     weights = {
-        'mos_pred': 0.5,  # Higher weight for MOS
+        'mos_pred': 0.3, 
         'noi_pred': 0.1,
-        'dis_pred': 0.1,
-        'col_pred': 0.1,
-        'loud_pred': 0.2   # Substantial weight for loudness
+        'dis_pred': 0.05,
+        'col_pred': 0.05,
+        'loud_pred': 0.1,
+        'word_error_rate': 0.4   # Assign 40% weight to WER
     }
 
     # Normalize each metric to a 0-1 scale
@@ -3495,11 +3497,11 @@ def calculate_audio_quality_scores(data):
     for metric, weight in weights.items():
         data['composite_score'] += data[metric] * weight
 
-    # Debugging print statement
-    # print("Composite scores calculated:", data['composite_score'])
+    # Round the composite score to 3 decimal places
+    data['composite_score'] = data['composite_score'].round(3)
 
-    # Return the DataFrame with the composite score
-    return data[['deg', 'model', 'composite_score']]
+    # Return the composite score
+    return data['composite_score'][0]
 
 
 def score(file, text) -> float:
@@ -3540,14 +3542,18 @@ def score(file, text) -> float:
     # Word Error Rate prediction
     wer = SpeechToTextEvaluator()
     word_error_rate = wer.evaluate_wer(file, text)
-    print( "Word Error Rate is:  ", word_error_rate)
+    print("Word Error Rate is:  ", word_error_rate)
+
     # Instantiate the nisqaModel with hardcoded arguments
     nisqa = nisqaModel(args)
     # Print the device of the model
-    print(" The parameters Device of the NISQA MODEL:  ",next(nisqa.model.parameters()).device)
+    print(" The parameters Device of the NISQA MODEL:  ", next(nisqa.model.parameters()).device)
     # Execute the prediction directly
     nisqa.predict()
     data = pd.read_csv('NISQA_results.csv')
-    score_data = calculate_audio_quality_scores(data)
-    return score_data['composite_score'].iloc[0] * (1.0 - word_error_rate /100 )
+    # Include WER in the 'NISQA_results.csv' file
+    data['word_error_rate'] = word_error_rate
+    data.to_csv('NISQA_results.csv', index=False)
 
+    # Return the result from calculate_audio_quality_scores
+    return calculate_audio_quality_scores(data)

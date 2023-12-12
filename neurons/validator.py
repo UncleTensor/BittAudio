@@ -50,6 +50,7 @@ print("Directories in sys.path:", sys.path)
 print("Contents of 'AudioSubnet':", os.listdir(audio_subnet_path))
 
 # Import your module
+import lib.utils
 import lib
 import traceback
 
@@ -138,6 +139,7 @@ def get_config():
     parser.add_argument(
         "--custom", default="my_custom_value", help="Adds a custom value to the parser."
     )
+    parser.add_argument("--auto_update", default="yes", help="Auto update")
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
     # Supply Huggingface hub API key --hub_key default is None
@@ -285,7 +287,6 @@ def main(config):
                 # Filter metagraph.axons by indices saved in dendrites_to_query list
                 filtered_axons = [metagraph.axons[i] for i in dendrites_to_query]
                 if step % 2 == 0: # 
-                    bt.logging.info(f"Querying dendrites: {filtered_axons}")
                     # Broadcast a GET_DATA query to filtered miners on the network.
                     random_prompt = random.choice(prompts)
                     responses = dendrite.query(
@@ -392,9 +393,6 @@ def main(config):
                         if result: bt.logging.success('Successfully set weights.')
                         else: bt.logging.error('Failed to set weights.')
 
-                # End the current step and prepare for the next iteration.
-                step += 1
-
                 if last_reset_weights_block + 1800 < current_block:
                     bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
                     last_reset_weights_block = current_block
@@ -412,6 +410,9 @@ def main(config):
                 bt.logging.error(f"Error querying or processing responses: {e}")
                 traceback.print_exc()
 
+            step += 1
+            if step % 500 == 0 and config.auto_update == "yes":
+                lib.utils.try_update()
 
         # If the user interrupts the program, gracefully exit.
         except KeyboardInterrupt:
