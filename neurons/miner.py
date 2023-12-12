@@ -211,7 +211,7 @@ def main(config):
 
     # This is the core miner function, which decides the miner's response to a valid, high-priority request.
     def ProcessSpeech(synapse: lib.protocol.TextToSpeech) -> lib.protocol.TextToSpeech:
-        bt.logging.debug("The prompt recieved from validator!")
+        bt.logging.debug("The prompt received from validator!")
         # Here we use the models class to generate the speech
         speech = tts_models.generate_speech(synapse.text_input)
         if config.model == "facebook/mms-tts-eng":
