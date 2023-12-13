@@ -325,13 +325,16 @@ def main(config):
                                             os.remove(os.path.join('/tmp', existing_file))
                                         except Exception as e:
                                             bt.logging.error(f"Error deleting existing WAV file: {e}")
-                                    # set model sampling rate to 24000 if the model is Suno Bark
-                                    if resp_i.model_name == "suno/bark":
-                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
-                                        print(f"Saved audio file to suno/bark -----{output_path}")
-                                    else:
-                                        torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
-                                        print(f"Saved audio file to {output_path}")
+                                    try:
+                                        # set model sampling rate to 24000 if the model is Suno Bark
+                                        if resp_i.model_name == "suno/bark":
+                                            torchaudio.save(output_path, src=audio_data_int, sample_rate=24000)
+                                            print(f"Saved audio file to suno/bark -----{output_path}")
+                                        else:
+                                            torchaudio.save(output_path, src=audio_data_int, sample_rate=16000)
+                                            print(f"Saved audio file to {output_path}")
+                                    except Exception as e:
+                                        print(f"An error occurred: {e}")
                                     # wavfile.write(output_path, sampling_rate, audio_tensor)
                                     score = lib.reward.score(output_path, text_input)
                                     bt.logging.info(f"Score after saving the file -------------- : {score}")

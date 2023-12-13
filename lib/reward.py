@@ -3462,46 +3462,48 @@ class nisqaModel(object):
         elif (self.args['tr_checkpoint']!='every_epoch') and (self.args['tr_checkpoint']!='best_only'):
             raise ValueError('selected tr_checkpoint option not available')
 
-
-
 def calculate_audio_quality_scores(data):
-    # Define the weights for each metric
-    weights = {
-        'mos_pred': 0.3, 
-        'noi_pred': 0.1,
-        'dis_pred': 0.05,
-        'col_pred': 0.05,
-        'loud_pred': 0.1,
-        'word_error_rate': 0.4   # Assign 40% weight to WER
-    }
+    try:
+        # Convert columns to numeric type
+        cols_to_convert = ['mos_pred', 'noi_pred', 'dis_pred', 'col_pred', 'loud_pred', 'word_error_rate']
+        for col in cols_to_convert:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
 
-    # Normalize each metric to a 0-1 scale
-    for column in data.columns:
-        if column.endswith('_pred'):
-            max_value = data[column].max()
-            min_value = data[column].min()
-            # Debugging print statements
-            print(f"Normalizing {column}: max_value = {max_value}, min_value = {min_value}")
-            # Handle case where max_value equals min_value
-            if max_value == min_value:
-                data[column] = 1.0  # Or some default value if max_value == min_value
-            else:
-                data[column] = (data[column] - min_value) / (max_value - min_value)
+        # Define the weights for each metric
+        weights = {
+            'mos_pred': 0.28,  
+            'noi_pred': 0.08,
+            'dis_pred': 0.08,
+            'col_pred': 0.08,
+            'loud_pred': 0.08,
+            'word_error_rate': 0.40  
+        }
 
-    # Invert the scores for noiseness, discontinuity, and coloration
-    for metric in ['noi_pred', 'dis_pred', 'col_pred']:
-        data[metric] = 1 - data[metric]
+        # Normalize and invert scores as necessary
+        data['mos_pred'] = (data['mos_pred'] - 1) / 4  # 1 worst, 5 best
+        data['loud_pred'] = (data['loud_pred'] - 1) / 4  # 1 worst, 5 best
+        data['noi_pred'] = 1 - (data['noi_pred'] - 1) / 4  # 1 best, 5 worst
+        data['dis_pred'] = 1 - (data['dis_pred'] - 1) / 4  # 1 best, 5 worst
+        data['col_pred'] = 1 - (data['col_pred'] - 1) / 4  # 1 best, 5 worst
+        data['word_error_rate'] = 1 - (data['word_error_rate']) / 100  # 0 best, 100 worst
 
-    # Calculate composite score
-    data['composite_score'] = 0
-    for metric, weight in weights.items():
-        data['composite_score'] += data[metric] * weight
+        # Calculate composite score
+        data['composite_score'] = 0
+        for metric, weight in weights.items():
+            data['composite_score'] += data[metric] * weight
 
-    # Round the composite score to 3 decimal places
-    data['composite_score'] = data['composite_score'].round(3)
+        # Ensure the final score is within 0-1
+        data['composite_score'] = data['composite_score'].clip(0, 1)
 
-    # Return the composite score
-    return data['composite_score'][0]
+        # Round the composite score to 3 decimal places
+        data['composite_score'] = data['composite_score'].round(3)
+
+        return data['composite_score'][0]
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # Handle the error or return a default value
+        return None
 
 
 def score(file, text) -> float:
