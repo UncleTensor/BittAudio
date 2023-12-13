@@ -12,3 +12,4 @@ sentencepiece
 soundfile
 speechbrain
 tabulate
+gitpython
