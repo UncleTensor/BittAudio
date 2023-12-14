@@ -3482,9 +3482,9 @@ def calculate_audio_quality_scores(data):
         # Normalize and invert scores as necessary
         data['mos_pred'] = (data['mos_pred'] - 1) / 4  # 1 worst, 5 best
         data['loud_pred'] = (data['loud_pred'] - 1) / 4  # 1 worst, 5 best
-        data['noi_pred'] = 1 - (data['noi_pred'] - 1) / 4  # 1 best, 5 worst
-        data['dis_pred'] = 1 - (data['dis_pred'] - 1) / 4  # 1 best, 5 worst
-        data['col_pred'] = 1 - (data['col_pred'] - 1) / 4  # 1 best, 5 worst
+        data['noi_pred'] = (data['noi_pred'] - 1) / 4  # 1 worst, 5 best
+        data['dis_pred'] = (data['dis_pred'] - 1) / 4  # 1 worst, 5 best
+        data['col_pred'] = (data['col_pred'] - 1) / 4  # 1 worst, 5 best
         data['word_error_rate'] = 1 - (data['word_error_rate']) / 100  # 0 best, 100 worst
 
         # Calculate composite score
