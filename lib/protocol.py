@@ -118,3 +118,30 @@ class TextToSound(bt.Synapse):
           print(" Deserialize the sound_output into a PyTorch tensor.",self)
           return self
         raise TypeError("sound_output is not a tensor")
+    
+
+class VoiceClone(bt.Synapse):
+    """
+    VoiceClone class inherits from bt.Synapse.
+    It is used to clone a voice.
+    """
+    text_input: Optional[str] = None
+
+    # Required request input, filled by sending dendrite caller.
+    clone_input: Optional[List] = None
+
+    # Here we define speech_output as an Optional PyTorch tensor instead of bytes.
+    clone_output: Optional[List] = None
+
+    completion: str = None
+
+
+    def deserialize(self) -> List:
+        """
+        Deserialize the speech_output into a PyTorch tensor.
+        """
+        # If speech_output is a tensor, just return it
+        if isinstance(self.speech_output, List):
+          print(" Deserialize the speech_output into a PyTorch tensor.",self)
+          return self
+        raise TypeError("speech_output is not a tensor")
