@@ -17,8 +17,17 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+'''
+Disclaimer:
+Before using Coqui TTS for commercial purposes, it's essential that you agree to the Coqui license agreement. 
+This agreement outlines the terms and conditions for commercial use.
+ For more information and to ensure compliance with all legal requirements, 
+ please visit their LinkedIn post here. 
+ https://www.linkedin.com/posts/coqui-ai_coqui-activity-7095143706399232000--IRi
+
+ '''
+
 # Bittensor Miner lib:
-# TODO(developer): Rewrite based on protocol and validator defintion.
 
 # Step 1: Import necessary libraries and modules
 from scipy.io.wavfile import write as write_wav
@@ -44,50 +53,35 @@ audio_subnet_path = os.path.abspath(project_root)
 sys.path.insert(0, project_root)
 sys.path.insert(0, audio_subnet_path)
 
-# Print current working directory and directories in sys.path
-print("Current working directory:", os.getcwd())
-print("Directories in sys.path:", sys.path)
-
-# Print the contents of 'AudioSubnet' directory
-print("Contents of 'audiosubnet':", os.listdir(audio_subnet_path))
 # import this repo
-from models.text_to_speech_models import TextToSpeechModels
-from models.text_to_speech_models import SunoBark
-from models.text_to_speech_models import EnglishTextToSpeech
+from models.text_to_speech_models import SunoBark, TextToSpeechModels, ElevenLabsTTS, EnglishTextToSpeech
+from models.voice_clone import ElevenLabsClone  
+import lib.protocol
 import lib.utils
 import lib
 
 
 
 def get_config():
-    # Step 2: Set up the configuration parser
-    # This function initializes the necessary command-line arguments.
-    # Using command-line arguments allows users to customize various miner settings.
     parser = argparse.ArgumentParser()
-    # TODO(developer): Adds your custom miner arguments to the parser.
     parser.add_argument(
-        "--custom", default="my_custom_value", help="Adds a custom value to the parser."
+        "--model", default= 'elevenlabs/eleven' , help="The model to be used for text-to-speech." 
     )
     parser.add_argument(
-        "--model", default='microsoft/speecht5_tts', help="The model to use for text-to-speech." # suno/bark-small
+        "--clone_model", default= 'elevenlabs/eleven' , help="The model to be used for Voice cloning." 
+    )
+    parser.add_argument(
+        "--eleven_api", default='' , help="API key to be used for Eleven Labs." 
     )
     parser.add_argument("--auto_update", default="yes", help="Auto update")
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
-    # Adds subtensor specific arguments i.e. --subtensor.chain_endpoint ... --subtensor.network ...
     bt.subtensor.add_args(parser)
-    # Adds logging specific arguments i.e. --logging.debug ..., --logging.trace .. or --logging.logging_dir ...
     bt.logging.add_args(parser)
-    # Adds wallet specific arguments i.e. --wallet.name ..., --wallet.hotkey ./. or --wallet.path ...
     bt.wallet.add_args(parser)
-    # Adds axon specific arguments i.e. --axon.port ...
     bt.axon.add_args(parser)
-    # Activating the parser to read any command-line inputs.
-    # To print help message, run python3 lib/miner.py --help
     config = bt.config(parser)
 
-    # Step 3: Set up logging directory
-    # Logging captures events for diagnosis or understanding miner's behavior.
     config.full_path = os.path.expanduser(
         "{}/{}/{}/netuid{}/{}".format(
             config.logging.logging_dir,
@@ -103,7 +97,6 @@ def get_config():
     return config
 
 
-# Main takes the config and starts the miner.
 def main(config):
     # Activating Bittensor's logging with the set configurations.
     bt.logging(config=config, logging_dir=config.full_path)
@@ -114,7 +107,7 @@ def main(config):
     # This logs the active configuration to the specified logging directory for review.
     bt.logging.info(config)
 
-        # Activating Bittensor's logging with the set configurations.
+    # Activating Bittensor's logging with the set configurations.
     bt.logging(config=config, logging_dir=config.full_path)
     bt.logging.info(
         f"Running miner for subnet: {config.netuid} on network: {config.subtensor.chain_endpoint} with config:"
@@ -124,35 +117,42 @@ def main(config):
     bt.logging.info(config)
 
     # Check the supplied model and log the appropriate information.
-    if config.model == "microsoft/speecht5_tts":
-        bt.logging.info("Using the TextToSpeechModels with the supplied model: microsoft/speecht5_tts")
-        tts_models = TextToSpeechModels()
-    elif config.model == "facebook/mms-tts-eng":
-        bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
-        tts_models = EnglishTextToSpeech()
-    elif config.model == "suno/bark":
-        bt.logging.info("Using the SunoBark with the supplied model: suno/bark")
-        tts_models = SunoBark()
-    elif config.model is None:
-        bt.logging.error("Model name was not supplied. Exiting the program.")
+    # =========================================== Text To Speech model selection ============================================ 
+    try:
+        if config.model == "microsoft/speecht5_tts":
+            bt.logging.info("Using the TextToSpeechModels with the supplied model: microsoft/speecht5_tts")
+            tts_models = TextToSpeechModels()
+        elif config.model == "facebook/mms-tts-eng":
+            bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
+            tts_models = EnglishTextToSpeech()
+        elif config.model == "suno/bark":
+            bt.logging.info("Using the SunoBark with the supplied model: suno/bark")
+            tts_models = SunoBark()
+        elif config.model == "elevenlabs/eleven" and config.eleven_api is not None:
+            bt.logging.info(f"Using the Text-To-Speech with the supplied model: {config.model}")
+            tts_models = ElevenLabsTTS(config.eleven_api)
+        else:
+            bt.logging.error(f"Eleven Labs API key is required for the model: {config.model}")
+            exit(1)     
+    # =========================================== Text To Speech model selection ============================================
+            
+    # =========================================== Voice Clone model selection ===============================================    
+        if config.clone_model is not None and config.clone_model == "elevenlabs/eleven" and config.eleven_api is not None:
+            bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
+            voice_clone_model = ElevenLabsClone(config.eleven_api)
+        else:
+            bt.logging.error(f"Eleven Labs API key is required for the model: {config.clone_model}")
+            exit(1)        
+    except Exception as e:
+        bt.logging.info(f"An error occurred while model initilization: {e}")
         exit(1)
-    else:
-        bt.logging.error(f"Wrong model was supplied: {config.model}. Exiting the program.")
-        exit(1)
+    # =========================================== Voice Clone model selection ===============================================    
 
-    # Step 4: Initialize Bittensor miner objects
-    # These classes are vital to interact and function within the Bittensor network.
     bt.logging.info("Setting up bittensor objects.")
-
-    # Wallet holds cryptographic information, ensuring secure transactions and communication.
     wallet = bt.wallet(config=config)
     bt.logging.info(f"Wallet: {wallet}")
-
-    # subtensor manages the blockchain connection, facilitating interaction with the Bittensor blockchain.
     subtensor = bt.subtensor(config=config)
     bt.logging.info(f"Subtensor: {subtensor}")
-
-    # metagraph provides the network's current state, holding state about other participants in a subnet.
     metagraph = subtensor.metagraph(config.netuid)
     bt.logging.info(f"Metagraph: {metagraph}")
 
@@ -166,26 +166,140 @@ def main(config):
     my_subnet_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
     bt.logging.info(f"Running miner on uid: {my_subnet_uid}")
 
-    # Step 5: Set up miner functionalities
-    # The following functions control the miner's response to incoming requests.
+
+
+############################### Voice Clone ##########################################
+
     # The blacklist function decides if a request should be ignored.
-    def speech_blacklist_fn(synapse: lib.protocol.TextToSpeech) -> typing.Tuple[bool, str]:
-        # TODO(developer): Define how miners should blacklist requests. This Function
-        # Runs before the synapse data has been deserialized (i.e. before synapse.data is available).
-        # The synapse is instead contructed via the headers of the request. It is important to blacklist
-        # requests before they are deserialized to avoid wasting resources on requests that will be ignored.
-        # Below: Check that the hotkey is a registered entity in the metagraph.
+    def vc_blacklist_fn(synapse: lib.protocol.VoiceClone) -> typing.Tuple[bool, str]:
+        #  blacklist( synapse: VoiceClone ) -> Tuple[bool, str]:
         if synapse.dendrite.hotkey not in metagraph.hotkeys:
             # Ignore requests from unrecognized entities.
             bt.logging.trace(
                 f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
             )
             return True, "Unrecognized hotkey"
-        # TODO(developer): In practice it would be wise to blacklist requests from entities that
-        # are not validators, or do not have enough stake. This can be checked via metagraph.S
-        # and metagraph.validator_permit. You can always attain the uid of the sender via a
-        # metagraph.hotkeys.index( synapse.dendrite.hotkey ) call.
-        # Otherwise, allow the request to be processed further.
+        bt.logging.trace(
+            f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+        )
+        return False, "Hotkey recognized!"
+
+    # The priority function determines the order in which requests are handled.
+    # More valuable or higher-priority requests are processed before others.
+    def vc_priority_fn(synapse: lib.protocol.VoiceClone) -> float:
+        caller_uid = metagraph.hotkeys.index(
+            synapse.dendrite.hotkey
+        )  # Get the caller index.
+        prirority = float(metagraph.S[caller_uid])  # Return the stake as the priority.
+        bt.logging.trace(
+            f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
+        )
+        return prirority
+    
+    def save_audio(speech):
+        '''Save the audio file to disk'''
+        try:
+            # Check the first few bytes to determine the format
+            header = speech[:4]
+            if header.startswith(b'RIFF'):
+                format = 'WAV'
+            elif header.startswith(b'\xFF\xFB') or header.startswith(b'ID3'):
+                format = 'MP3'
+            else:
+                return 'Unknown Format'
+
+            # Generate a file name (You can modify this part as needed)
+            new_file_path = 'output_converted.' + format.lower()
+
+            # Save the bytes to a new file
+            with open(new_file_path, 'wb') as new_file:
+                new_file.write(speech)
+
+            bt.logging.success(f"File has been successfully saved as {new_file_path}")
+            return new_file_path
+        except Exception as e:
+            bt.logging.error(f"Error Occurred while saving the file: {e}")
+    
+    def ElevenlabsClone_call(text, source_file, hf_voice_id):
+        '''Call the Eleven Labs API to clone the voice'''
+        speech = None
+        try:
+            speech = voice_clone_model.clone_voice(text, source_file,hf_voice_id)
+            elevenlab_file = save_audio(speech)
+            return elevenlab_file
+        except Exception as e:
+            bt.logging.error(f"An error occurred while calling the model: {e}")
+
+    def convert_audio_to_tensor(audio_file):
+        '''Convert the audio file to a tensor'''
+        try:
+            # Get the file extension
+            _, file_extension = os.path.splitext(audio_file)
+
+            if file_extension.lower() in ['.wav', '.mp3']:
+                # load the audio file
+                audio, sample_rate = torchaudio.load(audio_file)
+                # convert the audio file to a tensor/list
+                audio = audio[0].tolist()
+                return audio
+            else:
+                bt.logging.error(f"Unsupported file format: {file_extension}")
+                return None
+        except Exception as e:
+            bt.logging.error(f"An error occurred while converting the file: {e}")
+
+    def ProcessClone(synapse: lib.protocol.VoiceClone) -> lib.protocol.VoiceClone:
+        '''Process the Voice Clone request'''
+        bt.logging.debug("The Voice Clone request recieved from validator!")
+        speech = None
+        try:
+            input_text = synapse.text_input
+            input_clone = synapse.clone_input
+            sample_rate = synapse.sample_rate
+            hf_voice_id = synapse.hf_voice_id
+
+            input_tensor = torch.tensor(input_clone, dtype=torch.float32)
+            if input_tensor.ndim == 1:
+                input_tensor = input_tensor.unsqueeze(0)
+            torchaudio.save('input.wav', src=input_tensor, sample_rate=sample_rate)
+
+            # Check if the input text is valid.
+            if input_text is None or input_text == "":
+                bt.logging.error("No text was supplied. Please supply a valid text.")
+                return None
+            
+            # Check if the input clone is valid.
+            if input_clone is None or input_clone == []:
+                bt.logging.error("No clone was supplied. Please supply a valid clone.")
+                return None
+            
+        except Exception as e:
+            bt.logging.error(f"An error occurred, No input text or input voice recieved: {e}")
+            return None
+
+        try:
+            if config.clone_model == "elevenlabs/eleven":
+                speech_file_path = ElevenlabsClone_call(input_text, 'input.wav',hf_voice_id)
+                speech = convert_audio_to_tensor(speech_file_path)
+            if speech is not None:
+                bt.logging.success("Voice Clone has been generated!")
+        except Exception as e:
+            print(f"An error occurred while clonning the file: {e}")
+        
+        synapse.clone_output = speech
+        return synapse
+
+########################################### Text to Speech ##########################################    
+
+
+    # The blacklist function decides if a request should be ignored.
+    def speech_blacklist_fn(synapse: lib.protocol.TextToSpeech) -> typing.Tuple[bool, str]:
+        if synapse.dendrite.hotkey not in metagraph.hotkeys:
+            # Ignore requests from unrecognized entities.
+            bt.logging.trace(
+                f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Unrecognized hotkey"
         bt.logging.trace(
             f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
         )
@@ -194,12 +308,6 @@ def main(config):
     # The priority function determines the order in which requests are handled.
     # More valuable or higher-priority requests are processed before others.
     def speech_priority_fn(synapse: lib.protocol.TextToSpeech) -> float:
-        # TODO(developer): Define how miners should prioritize requests.
-        # Miners may recieve messages from multiple entities at once. This function
-        # determines which request should be processed first. Higher values indicate
-        # that the request should be processed first. Lower values indicate that the
-        # request should be processed later.
-        # Below: simple logic, prioritize requests from entities with more stake.
         caller_uid = metagraph.hotkeys.index(
             synapse.dendrite.hotkey
         )  # Get the caller index.
@@ -209,17 +317,17 @@ def main(config):
         )
         return prirority
 
-    # This is the core miner function, which decides the miner's response to a valid, high-priority request.
     def ProcessSpeech(synapse: lib.protocol.TextToSpeech) -> lib.protocol.TextToSpeech:
-        bt.logging.debug("The prompt received from validator!")
-        # Here we use the models class to generate the speech
-        speech = tts_models.generate_speech(synapse.text_input)
+        bt.logging.success("The prompt received from validator!")
+        if config.model == "microsoft/speecht5_tts":
+            speech = tts_models.generate_speech(synapse.text_input)
+        if config.model == "elevenlabs/eleven":
+            speech = tts_models.generate_speech(synapse.text_input)
         if config.model == "facebook/mms-tts-eng":
-            # Assuming 'output' is a PyTorch tensor.
-            # Normalize your data to -1 to 1 if not already
+            speech = tts_models.generate_speech(synapse.text_input)
             audio_data = speech / torch.max(torch.abs(speech))
 
-            # # If the audio is mono, ensure it has a channel dimension
+            # If the audio is mono, ensure it has a channel dimension
             if audio_data.ndim == 1:
                 audio_data = audio_data.unsqueeze(0)
 
@@ -238,8 +346,6 @@ def main(config):
                 print(f"An error occurred while reading the audio data: {e}")
             # Initialize dtype to a default value
             dtype = None
-            # Determine the correct dtype based on sample width
-            # Commonly, sample width is 2 bytes for 16-bit audio
             if sample_width == 2:
                 dtype = np.int16
             elif sample_width == 1:
@@ -263,7 +369,7 @@ def main(config):
             return None
         else:
             try:
-                print("Speech generated!")
+                bt.logging.success("Text to Speech has been generated!")
                 if config.model == "facebook/mms-tts-eng":
                     # Convert the list to a tensor
                     speech_tensor = torch.Tensor(speech)
@@ -278,23 +384,26 @@ def main(config):
                     audio_data_int = audio_data_int.unsqueeze(0)
 
                     # Save the audio data as a .wav file
-                    # torchaudio.save('speech_output.wav', src=audio_data_int, sample_rate=16000)
                     synapse.speech_output = speech  # Convert PyTorch tensor to a list
 
                 elif config.model == "suno/bark":
-                    # Convert the list to a tensor
-                    # Move the audio array back to CPU for saving to disk
                     speech = speech.cpu().numpy().squeeze()
-                    # write_wav("output_audio.wav", 24000, speech)
                     synapse.model_name = config.model
                     synapse.speech_output = speech.tolist()
+
+                elif config.model == "elevenlabs/eleven":
+                    speech_file = save_audio(speech)
+                    synapse.model_name = config.model
+                    speech = convert_audio_to_tensor(speech_file)
+                    synapse.speech_output = speech
                 else:
+                    
                     synapse.speech_output = speech.tolist()  # Convert PyTorch tensor to a list
                 return synapse
             except Exception as e:
-                print(f"An error occurred: {e}")
+                print(f"An error occurred while processing speech output: {e}")
 
-    # Step 6: Build and link miner functions to the axon.
+####################################################### Attach Axon  ##############################################################
     # The axon handles request processing, allowing validators to send this process requests.
     axon = bt.axon(wallet=wallet, config=config)
     bt.logging.info(f"Axon {axon}")
@@ -302,9 +411,12 @@ def main(config):
     # Attach determiners which functions are called when servicing a request.
     bt.logging.info(f"Attaching forward function to axon.")
     axon.attach(
-        forward_fn=ProcessSpeech,
-        blacklist_fn=speech_blacklist_fn,
-        priority_fn=speech_priority_fn,
+        forward_fn= ProcessClone, 
+        blacklist_fn= vc_blacklist_fn, 
+        priority_fn= vc_priority_fn).attach(
+        forward_fn= ProcessSpeech,
+        blacklist_fn= speech_blacklist_fn,
+        priority_fn= speech_priority_fn,
     )
 
     # Serve passes the axon information to the network + netuid we are hosting on.

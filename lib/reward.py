@@ -3514,24 +3514,28 @@ def score(file, text) -> float:
     Returns:
     - float: The reward value for the miner.
     """
-
-    mode = 'predict_dir'  # or 'predict_dir', 'predict_csv'
+    # pick the filename and file path from the file arguement 
+    # filename = file.split('/')[-1] 
+    # filepath = os.path.abspath(file)
+    # filepath = os.path.dirname(file)
+    # bt.logging.info(f"_____________________________ File name _____________________________: {filename}")
+    # bt.logging.info(f"_____________________________ File Path _____________________________: {filepath}")
+    mode = 'predict_file'  # or 'predict_dir', 'predict_csv'
     pretrained_model = 'nisqa.tar'  # e.g., 'model.pth'
-    deg = 'path_to_speech_file'  # e.g., 'test.wav'
-    data_dir = '/tmp'  # e.g., 'data/'
+    deg = file  # e.g., 'test.wav'
+    # data_dir = filepath  # e.g., 'data/'
     output_dir = './'  # e.g., 'results/'
     csv_file = 'results.csv'  # e.g., 'data.csv'
     csv_deg = 'column_in_csv_with_files_name'  # e.g., 'filename'
     num_workers = 5
     bs = 1
     ms_channel = None  # or the specific channel if stereo file
-
     # Create a dictionary with the parameters
     args = {
         'mode': mode,
         'pretrained_model': pretrained_model,
         'deg': deg,
-        'data_dir': data_dir,
+        # 'data_dir': data_dir,
         'output_dir': output_dir,
         'csv_file': csv_file,
         'csv_deg': csv_deg,
@@ -3545,7 +3549,6 @@ def score(file, text) -> float:
     wer = SpeechToTextEvaluator()
     word_error_rate = wer.evaluate_wer(file, text)
     print("Word Error Rate is:  ", word_error_rate)
-
     # Instantiate the nisqaModel with hardcoded arguments
     nisqa = nisqaModel(args)
     # Print the device of the model

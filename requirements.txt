@@ -1,3 +1,4 @@
+elevenlabs==0.2.6
 bittensor
 torch
 librosa
@@ -13,3 +14,5 @@ soundfile
 speechbrain
 tabulate
 gitpython
+TTS
+pydub

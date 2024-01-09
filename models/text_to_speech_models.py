@@ -23,7 +23,10 @@ from transformers import AutoProcessor, BarkModel
 from transformers import VitsModel, AutoTokenizer
 from torchaudio.transforms import Resample
 from datasets import load_dataset
+from elevenlabs import generate, voices
+from elevenlabs import set_api_key
 import torchaudio
+import random
 import torch
 import os
 
@@ -118,3 +121,24 @@ class EnglishTextToSpeech:
         with torch.no_grad():
             speech = self.model(**inputs).waveform
         return speech
+
+class ElevenLabsTTS:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.voices = voices()
+
+    def generate_speech(self,text_input):
+        selected_voice = None
+        audio = None
+        try:
+            set_api_key(self.api_key)
+            selected_voice = random.choice(self.voices)
+            audio = generate(
+                text = text_input,
+                voice=selected_voice.voice_id,
+                # model="eleven_multilingual_v2"
+            )
+
+            return audio
+        except Exception as e:
+            print(f"An error occurred while processing the input audio in 11 Labs: {e}")

@@ -16,19 +16,31 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-
+import numpy as np
+import torch
 from typing import Optional, List
 import bittensor as bt
+import pydantic
 
 class TextToSpeech(bt.Synapse):
     """
     TextToSpeech class inherits from bt.Synapse.
     It is used to convert text to speech.
     """
+    class Config:
+        """
+        Pydantic model configuration class for Prompting. This class sets validation of attribute assignment as True.
+        validate_assignment set to True means the pydantic model will validate attribute assignments on the class.
+        """
+
+        validate_assignment = True
+
+
+
     # Required request input, filled by sending dendrite caller.
     text_input: Optional[str] = None
     model_name: Optional[str] = None
-
+    clone_input: Optional[List] = None
     # Here we define speech_output as an Optional PyTorch tensor instead of bytes.
     speech_output: Optional[List] = None
 
@@ -45,31 +57,6 @@ class TextToSpeech(bt.Synapse):
         return self
         # raise TypeError("speech_output is not a tensor")
 
-
-class SpeechToText(bt.Synapse):
-    """
-    SpeechToText class inherits from bt.Synapse.
-    It is used to convert speech to text.
-    """
-    # Required request input, filled by sending dendrite caller.
-    speech_input: Optional[List] = None
-
-    # Here we define text_output as an Optional PyTorch tensor instead of bytes.
-    text_output: Optional[str] = None
-
-    completion: str = None
-
-
-    def deserialize(self) -> str:
-        """
-        Deserialize the text_output into a PyTorch tensor.
-        """
-        # If text_output is a tensor, just return it
-        if isinstance(self.text_output, str):
-          print(" Deserialize the text_output into a PyTorch tensor.",self)
-          return self
-        raise TypeError("text_output is not a tensor")
-    
 
 class TextToMusic(bt.Synapse):
     """
@@ -94,27 +81,32 @@ class TextToMusic(bt.Synapse):
           print(" Deserialize the music_output into a PyTorch tensor.",self)
           return self
         raise TypeError("music_output is not a tensor")
+
     
-class TextToSound(bt.Synapse):
+
+class VoiceClone(bt.Synapse):
     """
-    TextToSound class inherits from bt.Synapse.
-    It is used to convert text to sound.
+    VoiceClone class inherits from bt.Synapse.
+    It is used to clone a voice.
     """
-    # Required request input, filled by sending dendrite caller.
+    class Config:
+        """
+        Pydantic model configuration class for Prompting. This class sets validation of attribute assignment as True.
+        validate_assignment set to True means the pydantic model will validate attribute assignments on the class.
+        """
+
+        validate_assignment = True
+
     text_input: Optional[str] = None
+    clone_input: Optional[List] = None
+    clone_output: Optional[List] = []
+    sample_rate: Optional[int] = None
+    completion: Optional[List] = None
+    hf_voice_id: Optional[str] = None
 
-    # Here we define sound_output as an Optional PyTorch tensor instead of bytes.
-    sound_output: Optional[List] = None
-
-    completion: str = None
-
-
-    def deserialize(self) -> List:
+    def deserialize(self) -> "VoiceClone":
         """
-        Deserialize the sound_output into a PyTorch tensor.
+        Return the clone_output as bytes.
+        This method would need to be further implemented based on how the bytes data is intended to be used.
         """
-        # If sound_output is a tensor, just return it
-        if isinstance(self.sound_output, List):
-          print(" Deserialize the sound_output into a PyTorch tensor.",self)
-          return self
-        raise TypeError("sound_output is not a tensor")
+        return self
