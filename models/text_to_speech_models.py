@@ -136,7 +136,6 @@ class ElevenLabsTTS:
             audio = generate(
                 text = text_input,
                 voice=selected_voice.voice_id,
-                # model="eleven_multilingual_v2"
             )
 
             return audio

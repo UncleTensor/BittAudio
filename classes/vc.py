@@ -197,7 +197,7 @@ class VoiceCloningService(AIModelService):
                     ax,
                     lib.protocol.VoiceClone(roles=["user"], text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
                     deserialize=True,
-                    timeout=30
+                    timeout=60
                 )
                 # Process the responses if needed
                 self.process_voice_clone_responses(ax)
@@ -238,12 +238,12 @@ class VoiceCloningService(AIModelService):
                 # Score the output and update the weights
                 score = self.score_output(self.audio_file_path, cloned_file_path, self.text_input)
                 self.update_score(axon, score)
-                # existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
-                # for existing_file in existing_wav_files:
-                #     try:
-                #         os.remove(os.path.join('/tmp', existing_file))
-                #     except Exception as e:
-                #         bt.logging.error(f"Error deleting existing WAV file: {e}")
+                existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
+                for existing_file in existing_wav_files:
+                    try:
+                        os.remove(os.path.join('/tmp', existing_file))
+                    except Exception as e:
+                        bt.logging.error(f"Error deleting existing WAV file: {e}")
 
         except Exception as e:
             pass

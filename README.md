@@ -116,9 +116,25 @@ python neurons/miner.py \
 ### Voice Clone Service
 Run the validator with the following command, replacing `{wallet_name}`, `{hotkey_name}`, and `{huggingface_access_token}` with your wallet and hotkey names and HuggingFace access token. Place your audio files (e.g., `audio01.wav`) and text files with the corresponding name (e.g., `audio01.txt`) in the `vc_source` folder for custom voice cloning. Once the files are processed, they will be moved to `vc_processed` folder. The voice cloned output will be saved in the `vc_target` folder.
 
+The supported languages for **Voice Clone** include: 
+- English, Polish, German, 
+- Korean, Dutch, Turkish, 
+- Swedish, Indonesian, Vietnamese,  
+- Ukrainian, Greek, Czech,  
+- Finnish, Filipino, - Romanian, 
+- Danish, Bulgarian, Malay, 
+- Hungarian, Norwegian, Slovak, 
+- Croatian, Classic Arabic, Tamil, 
+- Spanish, French, Italian, 
+- Hindi, and Portuguese. 
+
+**Note:** Some languages perform very good while others underperform.
+
 ### Text-to-Speech (TTS) Service
 - For prompts from HuggingFace, set your HuggingFace access token.
 - For custom prompts, place a CSV file named `tts_prompts.csv` in the `tts_source` directory. Audio outputs will be stored in the `tts_target` directory.
+
+**Note:** ElevenLabs Test-To-Speech does not support multiple languages. Only English is supported.
 
 ## Validator Command  
 ```bash
