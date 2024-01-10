@@ -60,12 +60,12 @@ class VoiceCloningService(AIModelService):
         self.text_input = ""
 
     def load_vc_prompts(self):
-        gs_dev = load_dataset("etechgrid/Prompts_for_Voice_cloning_and_TTS", trust_remote_code=True)
+        gs_dev = load_dataset("etechgrid/Prompts_for_Voice_cloning_and_TTS")
         self.prompts = gs_dev['train']['text']
         return self.prompts
 
     def load_vc_voices(self):
-        dataset = load_dataset("etechgrid/28.5k_wavfiles_dataset", trust_remote_code=True)
+        dataset = load_dataset("etechgrid/28.5k_wavfiles_dataset")
         if 'train' in dataset:
             self.audio_files = [item['audio'] for item in dataset['train']]
             return self.audio_files

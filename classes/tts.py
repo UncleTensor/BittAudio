@@ -49,7 +49,7 @@ class TextToSpeechService(AIModelService):
         ###################################### DIRECTORY STRUCTURE ###########################################
 
     def load_prompts(self):
-        gs_dev = load_dataset("etechgrid/Prompts_for_Voice_cloning_and_TTS", trust_remote_code=True)
+        gs_dev = load_dataset("etechgrid/Prompts_for_Voice_cloning_and_TTS")
         self.prompts = gs_dev['train']['text']
         return self.prompts
         
