@@ -268,7 +268,6 @@ class TextToSpeechService(AIModelService):
         filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
         bt.logging.info(f"filtered_uids:{filtered_uids}")
         dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
-        dendrites_to_query = filtered_uids
         bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
         return dendrites_to_query
 
