@@ -141,7 +141,7 @@ class TextToSpeechService(AIModelService):
             filtered_axons,
             lib.protocol.TextToSpeech(roles=["user"], text_input=prompt),
             deserialize=True,
-            timeout=10,
+            timeout=30,
         )
         return responses
     
