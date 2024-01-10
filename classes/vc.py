@@ -36,17 +36,17 @@ class VoiceCloningService(AIModelService):
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
 
         ###################################### DIRECTORY STRUCTURE ###########################################
-        self.source_path = os.path.join(audio_subnet_path, "source_dir")
+        self.source_path = os.path.join(audio_subnet_path, "vc_source")
         # Check if the directory exists
         if not os.path.exists(self.source_path):
             # If not, create the directory
             os.makedirs(self.source_path)
-        self.target_path = os.path.join(audio_subnet_path, "target_dir")
+        self.target_path = os.path.join(audio_subnet_path, "vc_target")
         # Check if the directory exists
         if not os.path.exists(self.target_path):
             # If not, create the directory
             os.makedirs(self.target_path)
-        self.processed_path = os.path.join(audio_subnet_path, "processed_dir")
+        self.processed_path = os.path.join(audio_subnet_path, "vc_processed")
         # Check if the directory exists
         if not os.path.exists(self.processed_path):
             # If not, create the directory
