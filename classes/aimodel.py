@@ -43,7 +43,7 @@ class AIModelService:
         parser.add_argument("--auto_update", default="yes", help="Auto update")
         parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
         parser.add_argument("--hub_key", type=str, default=None, help="Supply the Huggingface Hub API key for prompt dataset")
-        parser.add_argument("--vcdnp", type=str, default=5, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=str, default=3, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
 
         # Add Bittensor specific arguments

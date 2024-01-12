@@ -95,7 +95,7 @@ class VoiceCloningService(AIModelService):
                 sound_files = [f for f in files if f.endswith(".wav") or f.endswith(".mp3")]
                 text_files = [f for f in files if os.path.splitext(f)[0] + ".txt" in files]
 
-                if step % 3 == 0 and not sound_files or not text_files:
+                if step % 1000 == 0 and not sound_files or not text_files:
                     bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone ---------------------------------")
                     self.filename = ""
                     self.text_input = random.choice(self.prompts)
@@ -114,7 +114,7 @@ class VoiceCloningService(AIModelService):
                         sample_rate = sampling_rate
                         await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
                     
-                elif step % 3 == 0 :
+                elif step % 1 == 0 :
                     bt.logging.info(f"--------------------------------- Prompt and voices are being used locally for Voice Clone ---------------------------------")
                     # Extract the base name (without extension) of each sound file
                     sound_file_basenames = [os.path.splitext(f)[0] for f in sound_files]
