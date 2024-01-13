@@ -72,9 +72,15 @@ class VoiceCloningService(AIModelService):
 
     async def run_async(self):
         step = 0
+        running_tasks = []
         while True:
             try:
-                await self.main_loop_logic(step)
+                new_tasks = await self.main_loop_logic(step)
+                running_tasks.extend(new_tasks)
+
+                # Periodically check and clean up completed tasks
+                running_tasks = [task for task in running_tasks if not task.done()]
+
                 step += 1
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting VoiceCloneService.")
@@ -83,77 +89,87 @@ class VoiceCloningService(AIModelService):
                 print(f"An error occurred in VoiceCloneService: {e}")
                 traceback.print_exc()
 
+    async def process_huggingface_prompts(self, step):
+        if step % 2000 == 0:
+            bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone ---------------------------------")
+            self.filename = ""
+            self.text_input = random.choice(self.prompts)
+            if len(self.text_input) > 256:
+                bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
+                pass
+            else:
+                vc_voice = random.choice(self.audio_files)
+                audio_array = vc_voice['array']
+                sampling_rate = vc_voice['sampling_rate']
+                self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
+                sf.write('input_file.wav', audio_array, sampling_rate)
+                self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
+                waveform, _ = torchaudio.load(self.audio_file_path)
+                clone_input = waveform.tolist()
+                sample_rate = sampling_rate
+                await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
+
+    async def process_local_files(self, step, sound_files):
+        if step % 30 == 0 and sound_files:
+            bt.logging.info(f"--------------------------------- Prompt and voices are being used locally for Voice Clone ---------------------------------")
+            # Extract the base name (without extension) of each sound file
+            sound_file_basenames = [os.path.splitext(f)[0] for f in sound_files]
+            for filename in sound_files:
+                self.filename = filename
+                text_file = os.path.splitext(filename)[0] + ".txt"
+                text_file_path = os.path.join(self.source_path, text_file)
+                self.audio_file_path = os.path.join(self.source_path, filename)
+                new_file_path = os.path.join(self.processed_path, filename)
+                new_txt_path = os.path.join(self.processed_path, text_file)
+
+                
+                # Check if the base name of the text file is in the list of sound file base names
+                if os.path.splitext(text_file)[0] in sound_file_basenames:
+                    with open(text_file_path, 'r') as file:
+                        text_content = file.read().strip()
+                        self.text_input = text_content
+                    if len(self.text_input) > 256:
+                        bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
+                        continue
+                    audio_content, sampling_rate = self.read_audio_file(self.audio_file_path)
+                    clone_input = audio_content.tolist()
+                    sample_rate = sampling_rate
+                    self.hf_voice_id = "local" 
+                    await self.generate_voice_clone(self.text_input,clone_input, sample_rate)
+
+                    # Move the file to the processed directory
+                    if os.path.exists(self.audio_file_path):
+                        os.rename(self.audio_file_path, new_file_path)
+                        os.rename(text_file_path, new_txt_path)
+                    else:
+                        bt.logging.warning(f"File not found: {self.audio_file_path}, it may have already been processed.")
+                    # Move the text file to the processed directory
+            
+            bt.logging.info("All files have been successfully processed from the vc_source directory.")
+            
+
 
     async def main_loop_logic(self, step):
+        tasks = []
         try:
-            # Sync metagraph periodically
             if step % 5 == 0:
                 self.metagraph.sync(subtensor=self.subtensor)
                 bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
-            try:
-                files = os.listdir(self.source_path)
-                sound_files = [f for f in files if f.endswith(".wav") or f.endswith(".mp3")]
-                text_files = [f for f in files if os.path.splitext(f)[0] + ".txt" in files]
 
-                if step % 1000 == 0 and not sound_files or not text_files:
-                    bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone ---------------------------------")
-                    self.filename = ""
-                    self.text_input = random.choice(self.prompts)
-                    if len(self.text_input) > 256:
-                        bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
-                        pass
-                    else:
-                        vc_voice = random.choice(self.audio_files)
-                        audio_array = vc_voice['array']
-                        sampling_rate = vc_voice['sampling_rate']
-                        self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
-                        sf.write('input_file.wav', audio_array, sampling_rate)
-                        self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
-                        waveform, _ = torchaudio.load(self.audio_file_path)
-                        clone_input = waveform.tolist()
-                        sample_rate = sampling_rate
-                        await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
-                    
-                elif step % 1 == 0 :
-                    bt.logging.info(f"--------------------------------- Prompt and voices are being used locally for Voice Clone ---------------------------------")
-                    # Extract the base name (without extension) of each sound file
-                    sound_file_basenames = [os.path.splitext(f)[0] for f in sound_files]
-                    for filename in sound_files:
-                        self.filename = filename
-                        text_file = os.path.splitext(filename)[0] + ".txt"
-                        text_file_path = os.path.join(self.source_path, text_file)
-                        self.audio_file_path = os.path.join(self.source_path, filename)
-                        
-                        # Check if the base name of the text file is in the list of sound file base names
-                        if os.path.splitext(text_file)[0] in sound_file_basenames:
-                            with open(text_file_path, 'r') as file:
-                                text_content = file.read().strip()
-                                self.text_input = text_content
-                            if len(self.text_input) > 256:
-                                bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
-                                continue
-                            audio_content, sampling_rate = self.read_audio_file(self.audio_file_path)
-                            clone_input = audio_content.tolist()
-                            sample_rate = sampling_rate
-                            self.hf_voice_id = "local" 
-                            await self.generate_voice_clone(self.text_input,clone_input, sample_rate)
+            files = os.listdir(self.source_path)
+            sound_files = [f for f in files if f.endswith(".wav") or f.endswith(".mp3")]
 
-                            # Move the file to the processed directory
-                            os.rename(self.audio_file_path, os.path.join(self.processed_path, filename))
-                            # Move the text file to the processed directory
-                            os.rename(text_file_path, os.path.join(self.processed_path, text_file))
-
-
-                    print("All files have been successfully processed from the source_dir.")
-            except Exception as e:
-                print(f"An error occurred: {e}")
-
-            await asyncio.sleep(0.5) 
+            # Schedule both tasks to run concurrently
+            huggingface_task = asyncio.create_task(self.process_huggingface_prompts(step))
+            local_files_task = asyncio.create_task(self.process_local_files(step, sound_files))
+            tasks.extend([huggingface_task, local_files_task])
 
         except Exception as e:
             bt.logging.error(f"An error occurred in VoiceCloningService: {e}")
             traceback.print_exc()
 
+        await asyncio.sleep(1)  # Delay at the end of each loop iteration
+        return tasks
 
     def convert_array_to_wav(audio_data, output_filename):
         """
