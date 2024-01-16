@@ -103,6 +103,8 @@ class VoiceClone(bt.Synapse):
     sample_rate: Optional[int] = None
     completion: Optional[List] = None
     hf_voice_id: Optional[str] = None
+    model_name: Optional[str] = None
+
 
     def deserialize(self) -> "VoiceClone":
         """

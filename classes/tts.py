@@ -105,7 +105,7 @@ class TextToSpeechService(AIModelService):
                     continue
                 self.p_index = p_index
                 filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
-                bt.logging.info(f"--------------------------------- Prompt are being used locally for TTS ---------------------------------")
+                bt.logging.info(f"--------------------------------- Prompt are being used locally for TTS at Step: {step} ---------------------------------")
                 responses = self.query_network(filtered_axons,lprompt)
                 self.process_responses(filtered_axons,responses, lprompt)
 
@@ -122,9 +122,10 @@ class TextToSpeechService(AIModelService):
             while len(g_prompt) > 256:
                 bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
                 g_prompt = random.choice(g_prompts)
-            if step % 2 == 0:
+            if step % 20 == 0:
                 filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
-                bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for TTS ---------------------------------")
+                bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for TTS at Step: {step} ---------------------------------")
+                bt.logging.info(f"______________Prompt______________: {g_prompt}")
                 responses = self.query_network(filtered_axons,g_prompt)
                 self.process_responses(filtered_axons,responses, g_prompt)
 
@@ -147,7 +148,7 @@ class TextToSpeechService(AIModelService):
     
     def update_block(self):
         self.current_block = self.subtensor.block
-        if self.current_block - self.last_updated_block > 50:
+        if self.current_block - self.last_updated_block > 100:
             bt.logging.info(f"Updating weights. Last update was at block {self.last_updated_block}")
             bt.logging.info(f"Current block is {self.current_block}")
             self.update_weights(self.scores)
@@ -155,7 +156,7 @@ class TextToSpeechService(AIModelService):
         else:
             bt.logging.info(f"Updating weights. Last update was at block:  {self.last_updated_block}")
             bt.logging.info(f"Current block is: {self.current_block}")
-            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 50}")
+            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 100}")
             bt.logging.info(f"Skipping weight update. Last update was at block {self.last_updated_block}")
 
     def process_responses(self,filtered_axons, responses, prompt):
@@ -170,10 +171,12 @@ class TextToSpeechService(AIModelService):
     def process_response(self, axon, response, prompt):
         try:
             speech_output = response.speech_output
-            if response is not None and isinstance(response, lib.protocol.TextToSpeech) and response.speech_output is not None:
+            if response.dendrite.status_code != 200:
+                self.punish(axon, service="Text-To-Speech", punish_message=response.dendrite.status_message)
+            elif response is not None and isinstance(response, lib.protocol.TextToSpeech) and response.speech_output is not None and response.dendrite.status_code == 200:
                 self.handle_speech_output(axon, speech_output, prompt, response.model_name)
             else:
-                self.punish(axon)
+                self.punish(axon, service="Text-To-Speech", punish_message=response.dendrite.status_message)
         except Exception as e:
             bt.logging.error(f'An error occurred while handling speech output: {e}')
 
@@ -217,7 +220,7 @@ class TextToSpeechService(AIModelService):
             # Score the output and update the weights
             score = self.score_output(output_path, prompt)
             bt.logging.info(f"Aggregated Score from the NISQA and WER Metric: {score}")
-            self.update_score(axon, score)
+            self.update_score(axon, score, service="Text-To-Speech")
 
         except Exception as e:
             bt.logging.error(f"Error processing speech output: {e}")

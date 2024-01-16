@@ -16,3 +16,11 @@ tabulate
 gitpython
 TTS
 pydub
+sox
+soundfile
+fairseq
+encodec
+funcy
+audiolm_pytorch
+torchaudio
+scipy

@@ -43,7 +43,7 @@ class AIModelService:
         parser.add_argument("--auto_update", default="yes", help="Auto update")
         parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
         parser.add_argument("--hub_key", type=str, default=None, help="Supply the Huggingface Hub API key for prompt dataset")
-        parser.add_argument("--vcdnp", type=int, default=3, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=int, default=5, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
 
         # Add Bittensor specific arguments
@@ -105,18 +105,18 @@ class AIModelService:
         self.metagraph = self.subtensor.metagraph(self.config.netuid)
         bt.logging.info(f"Metagraph: {self.metagraph}")
 
-    def update_score(self, axon, new_score):
+    def update_score(self, axon, new_score, service):
         try:
             uids = self.metagraph.uids.tolist()
             zipped_uids = list(zip(uids, self.metagraph.axons))
             uid_index = list(zip(*filter(lambda x: x[1] == axon, zipped_uids)))[0][0]
             alpha = self.config.alpha
             self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * new_score
-            bt.logging.info(f"Updated score for Hotkey {axon.hotkey}: {self.scores[uid_index]}")
+            bt.logging.info(f"Updated score for {service} Hotkey {axon.hotkey}: {self.scores[uid_index]}")
         except Exception as e:
             print(f"An error occurred while updating the score: {e}")
 
-    def punish(self, axon):
+    def punish(self, axon, service, punish_message):
         '''Punish the axon for returning an invalid response'''
         try:
             uids = self.metagraph.uids.tolist()
@@ -125,7 +125,7 @@ class AIModelService:
             alpha = self.config.alpha
             self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * 0.0
             # Log the updated score
-            bt.logging.info(f"Updated score for punished Hotkey {axon.hotkey}: {self.scores[uid_index]}")
+            bt.logging.info(f"Score after punishment for Hotkey {axon.hotkey} using {service} is Punished  Due to {punish_message} : {self.scores[uid_index]}")
         except Exception as e:
             print(f"An error occurred while punishing the axon: {e}")
 

@@ -79,7 +79,8 @@ Below are instructions for using the arguments in `miner.py` and `validator.py`:
 
 # Instructions for `miner.py`:
 
-## Miner Command
+## Miner Command for running VC ElevenLabs API:
+
 ```bash
 python neurons/miner.py \
     --netuid 16 \
@@ -94,13 +95,27 @@ python neurons/miner.py \
 
 ```
 
+## Miner Command for running VC bark/voiceclone:
+
+```bash
+python neurons/miner.py \
+    --netuid 16 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+    --auto_update yes \
+    --clone_model bark/voiceclone \
+    --model {model} \
+    --axon.port {machine_port}
+```
+
 ### Bittensor Miner Script Arguments:
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | Default: 'elevenlabs/eleven' ; 'microsoft/speecht5_tts' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
+| **Text To Speech Model**    | `--model`                            | Default: 'microsoft/speecht5_tts' ; 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
 | **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |
-| **Voice Clone Model** | `--clone_model`                           |  'elevenlabs/eleven'       | The model to use for VOice Clone |
+| **Voice Clone Model** | `--clone_model`                           | Default: 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
 | **ElevenLabs API token** | `--eleven_api`                           |  Mandatory       | The API key to use for ElevenLabs Model |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |

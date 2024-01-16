@@ -80,8 +80,8 @@ class VoiceCloningService(AIModelService):
 
                 # Periodically check and clean up completed tasks
                 running_tasks = [task for task in running_tasks if not task.done()]
-
                 step += 1
+
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting VoiceCloneService.")
                 break
@@ -90,27 +90,27 @@ class VoiceCloningService(AIModelService):
                 traceback.print_exc()
 
     async def process_huggingface_prompts(self, step):
-        if step % 1000 == 0:
+        if step % 500 == 0:
             bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
             self.filename = ""
             self.text_input = random.choice(self.prompts)
-            if len(self.text_input) > 256:
+            while len(self.text_input) > 256:
                 bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
-                pass
-            else:
-                vc_voice = random.choice(self.audio_files)
-                audio_array = vc_voice['array']
-                sampling_rate = vc_voice['sampling_rate']
-                self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
-                sf.write('input_file.wav', audio_array, sampling_rate)
-                self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
-                waveform, _ = torchaudio.load(self.audio_file_path)
-                clone_input = waveform.tolist()
-                sample_rate = sampling_rate
-                await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
+                self.text_input = random.choice(self.prompts)
+
+            vc_voice = random.choice(self.audio_files)
+            audio_array = vc_voice['array']
+            sampling_rate = vc_voice['sampling_rate']
+            self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
+            sf.write('input_file.wav', audio_array, sampling_rate)
+            self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
+            waveform, _ = torchaudio.load(self.audio_file_path)
+            clone_input = waveform.tolist()
+            sample_rate = sampling_rate
+            await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
 
     async def process_local_files(self, step, sound_files):
-        if step % 30 == 0 and sound_files:
+        if step % 100 == 0 and sound_files:
             bt.logging.info(f"--------------------------------- Prompt and voices are being used locally for Voice Clone at Step: {step} ---------------------------------")
             # Extract the base name (without extension) of each sound file
             sound_file_basenames = [os.path.splitext(f)[0] for f in sound_files]
@@ -152,7 +152,7 @@ class VoiceCloningService(AIModelService):
     async def main_loop_logic(self, step):
         tasks = []
         try:
-            if step % 5 == 0:
+            if step % 20 == 0:
                 self.metagraph.sync(subtensor=self.subtensor)
                 bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
 
@@ -213,7 +213,7 @@ class VoiceCloningService(AIModelService):
                     ax,
                     lib.protocol.VoiceClone(roles=["user"], text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
                     deserialize=True,
-                    timeout=30
+                    timeout=90
                 )
                 # Process the responses if needed
                 self.process_voice_clone_responses(ax)
@@ -223,11 +223,12 @@ class VoiceCloningService(AIModelService):
 
     def process_voice_clone_responses(self, ax):
         try:
-            if self.response is not None and isinstance(self.response, lib.protocol.VoiceClone) and self.response.clone_output is not None:
+            if self.response.dendrite.status_code != 200:
+                self.punish(ax, service="Voice Cloning", punish_message=self.response.dendrite.status_message)
+            elif self.response is not None and isinstance(self.response, lib.protocol.VoiceClone) and self.response.clone_output is not None and self.response.dendrite.status_code == 200:
                 self.handle_clone_output(ax, self.response)
             else:
-                # call the punsh function
-                self.punish(ax)
+                self.punish(ax, service="Voice Cloning")
             return ax.hotkey
         except Exception as e:
             print(f"An error occurred while processing voice clone responses: {e}")
@@ -245,7 +246,10 @@ class VoiceCloningService(AIModelService):
                 audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
                 # Add an extra dimension to make it a 2D tensor
                 audio_data_int = audio_data_int.unsqueeze(0)
-                sampling_rate = 44000
+                if response.model_name == "elevenlabs/eleven":
+                    sampling_rate = 44000
+                else:
+                    sampling_rate = 24000
                 file = self.filename.split(".")[0]
                 cloned_file_path = os.path.join(self.target_path, file + '_cloned_'+ axon.hotkey[:6] +'_.wav' )
                 if file is None or file == "":
@@ -253,7 +257,7 @@ class VoiceCloningService(AIModelService):
                 torchaudio.save(cloned_file_path, src=audio_data_int, sample_rate=sampling_rate)
                 # Score the output and update the weights
                 score = self.score_output(self.audio_file_path, cloned_file_path, self.text_input)
-                self.update_score(axon, score)
+                self.update_score(axon, score, service="Voice Cloning")
                 existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
                 for existing_file in existing_wav_files:
                     try:
@@ -309,4 +313,3 @@ class VoiceCloningService(AIModelService):
             return dendrites_to_query
         except Exception as e:
             print(f"An error occurred while getting filtered axons: {e}")
-

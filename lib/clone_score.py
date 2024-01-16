@@ -71,6 +71,7 @@ class CloneScore:
 
         # Calculate MSE
         mse_score = self.calculate_mse(spec1, spec2).item()
+        bt.logging.info(f"MSE Score for Voice Cloning: {mse_score}")
         try:
             nisqa_wer_score = score(file_path2, input_text)
         except Exception as e:
@@ -78,12 +79,12 @@ class CloneScore:
             nisqa_wer_score = 0
         # Adjust MSE Score
         adjusted_mse = self.calculate_adjusted_msi(mse_score, max_mse)
-
+        bt.logging.info(f"Adjusted MSI Score for Voice Cloning: {adjusted_mse}")
         if mse_score > max_mse:
             max_mse =  mse_score
             adjusted_mse = 0
         final_score = (adjusted_mse + nisqa_wer_score)/2
-
-
+        bt.logging.info(f"Final Score for Voice Cloning: {final_score}")
+        
         return final_score, max_mse
 
