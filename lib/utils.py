@@ -68,7 +68,7 @@ def check_version_updated():
     
     
     if version2number(remote_version) != version2number(local_version):
-        bt.logging.info(f"👩‍👦Update to the latest version is required")
+        bt.logging.info(f"Update to the latest version is required")
         return True
     else:
         return False
@@ -76,33 +76,22 @@ def check_version_updated():
 def update_repo():
     try:
         repo = git.Repo(search_parent_directories=True)
+        
         origin = repo.remotes.origin
 
-        # Check for uncommitted changes (excluding untracked files)
-        if repo.is_dirty(untracked_files=True):
-            bt.logging.info("Uncommitted changes detected. Attempting to commit them.")
-
-            # Stage all changed files (tracked and untracked)
-            repo.git.add(all=True)
-
-            # Commit the changes
-            try:
-                repo.git.commit('-m', 'Auto-committing uncommitted changes')
-                bt.logging.info("Successfully committed uncommitted changes.")
-            except git.exc.GitCommandError as commit_error:
-                bt.logging.error(f"Error while committing changes: {commit_error}")
-                return False
+        if repo.is_dirty(untracked_files=False):
+            bt.logging.info("Update Iusse: Uncommited changes detected. Please commit changes")
         try:
             bt.logging.info("Trying to pull remote repository")
             origin.pull()
             bt.logging.info("Pulling successful")
             return True
-        except git.exc.GitCommandError as pull_error:
-            bt.logging.info(f"Update failed: Merge conflict detected: {pull_error}. Recommend you manually commit changes and update.")
+        except git.exc.GitCommandError as e:
+            bt.logging.info(f"update : Merge conflict detected: {e} Recommend you manually commit changes and update")
             return handle_merge_conflict(repo)
         
     except Exception as e:
-        bt.logging.error(f"Update failed: {e}. Recommend you manually commit changes and update.")
+        bt.logging.error(f"update failed: {e} Recommend you manually commit changes and update")
     
     return False
         
@@ -130,7 +119,7 @@ def version2number(version_string):
     return 100 * version_digits[0] + 10 * version_digits[1] + version_digits[2]
 
 def restart_app():
-    bt.logging.info("👩‍🦱app restarted due to the update")
+    bt.logging.info("App restarted due to the update")
     
     python = sys.executable
     os.execl(python, python, *sys.argv)
@@ -146,7 +135,7 @@ def try_update_packages():
         
         python_executable = sys.executable
         subprocess.check_call([python_executable], "-m", "pip", "install", "-r", requirements_path)
-        bt.logging.info("📦Updating packages finished.")
+        bt.logging.info("Updating packages finished.")
         
     except Exception as e:
         bt.logging.info(f"Updating packages failed {e}")
@@ -154,7 +143,7 @@ def try_update_packages():
 def try_update():
     try:
         if check_version_updated() == True:
-            bt.logging.info("found the latest version in the repo. try ♻️update...")
+            bt.logging.info("found the latest version in the repo. try update...")
             if update_repo() == True:
                 try_update_packages()
                 restart_app()
