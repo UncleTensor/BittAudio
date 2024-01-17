@@ -1,3 +1,14 @@
+# files to ignore
+*.pt
+*.pth
+*.wav
+*.mp3
+*.csv
+*.txt
+*.npz
+!models/sample3.wav
+!requirements.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

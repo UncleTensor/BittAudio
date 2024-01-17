@@ -76,24 +76,33 @@ def check_version_updated():
 def update_repo():
     try:
         repo = git.Repo(search_parent_directories=True)
-        
         origin = repo.remotes.origin
 
-        # origin.fetch()
-        if repo.is_dirty(untracked_files=False):
-            bt.logging.error("Update failed: Uncommited changes detected. Please commit changes")
-            return False
+        # Check for uncommitted changes (excluding untracked files)
+        if repo.is_dirty(untracked_files=True):
+            bt.logging.info("Uncommitted changes detected. Attempting to commit them.")
+
+            # Stage all changed files (tracked and untracked)
+            repo.git.add(all=True)
+
+            # Commit the changes
+            try:
+                repo.git.commit('-m', 'Auto-committing uncommitted changes')
+                bt.logging.info("Successfully committed uncommitted changes.")
+            except git.exc.GitCommandError as commit_error:
+                bt.logging.error(f"Error while committing changes: {commit_error}")
+                return False
         try:
-            bt.logging.info("Try pulling remote repository")
+            bt.logging.info("Trying to pull remote repository")
             origin.pull()
-            bt.logging.info("pulling success")
+            bt.logging.info("Pulling successful")
             return True
-        except git.exc.GitCommandError as e:
-            bt.logging.info(f"update : Merge conflict detected: {e} Recommend you manually commit changes and update")
+        except git.exc.GitCommandError as pull_error:
+            bt.logging.info(f"Update failed: Merge conflict detected: {pull_error}. Recommend you manually commit changes and update.")
             return handle_merge_conflict(repo)
         
     except Exception as e:
-        bt.logging.error(f"update failed: {e} Recommend you manually commit changes and update")
+        bt.logging.error(f"Update failed: {e}. Recommend you manually commit changes and update.")
     
     return False
         
