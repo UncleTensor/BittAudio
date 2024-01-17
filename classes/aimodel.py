@@ -123,7 +123,7 @@ class AIModelService:
             zipped_uids = list(zip(uids, self.metagraph.axons))
             uid_index = list(zip(*filter(lambda x: x[1] == axon, zipped_uids)))[0][0]
             alpha = self.config.alpha
-            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * 0.0
+            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.025)
             # Log the updated score
             bt.logging.info(f"Score after punishment for Hotkey {axon.hotkey} using {service} is Punished  Due to {punish_message} : {self.scores[uid_index]}")
         except Exception as e:
