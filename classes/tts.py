@@ -171,12 +171,12 @@ class TextToSpeechService(AIModelService):
     def process_response(self, axon, response, prompt):
         try:
             speech_output = response.speech_output
-            if response.dendrite.status_code != 200:
-                self.punish(axon, service="Text-To-Speech", punish_message=response.dendrite.status_message)
-            elif response is not None and isinstance(response, lib.protocol.TextToSpeech) and response.speech_output is not None and response.dendrite.status_code == 200:
+            if response is not None and isinstance(response, lib.protocol.TextToSpeech) and response.speech_output is not None and response.dendrite.status_code == 200:
                 self.handle_speech_output(axon, speech_output, prompt, response.model_name)
-            else:
+            elif response.dendrite.status_code != 403:
                 self.punish(axon, service="Text-To-Speech", punish_message=response.dendrite.status_message)
+            else:
+                pass
         except Exception as e:
             bt.logging.error(f'An error occurred while handling speech output: {e}')
 
