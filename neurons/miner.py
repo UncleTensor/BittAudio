@@ -61,7 +61,7 @@ import lib.protocol
 import lib.utils
 import lib
 
-
+BlackList = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe']
 
 def get_config():
     parser = argparse.ArgumentParser()
@@ -189,6 +189,11 @@ def main(config):
                 f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
             )
             return True, "Low stake"
+        elif synapse.dendrite.hotkey in BlackList:
+            bt.logging.trace(
+                f"Blacklisting Key recognized as blacklisted hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Blacklisted hotkey"
         else:
             bt.logging.trace(
                 f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
@@ -336,6 +341,11 @@ def main(config):
                 f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
             )
             return True, "Low stake"
+        elif synapse.dendrite.hotkey in BlackList:
+            bt.logging.trace(
+                f"Blacklisting Key recognized as blacklisted hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Blacklisted hotkey"
         else:
             bt.logging.trace(
                 f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
