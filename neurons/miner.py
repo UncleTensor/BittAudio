@@ -514,6 +514,7 @@ def main(config):
 
             if step % 1000 == 0 and config.auto_update == "yes":
                 lib.utils.update_repo()
+                lib.utils.try_update()
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
