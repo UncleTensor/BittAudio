@@ -61,7 +61,6 @@ import lib.protocol
 import lib.utils
 import lib
 
-BlackList = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe']
 
 def get_config():
     parser = argparse.ArgumentParser()
@@ -183,22 +182,27 @@ def main(config):
                 f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
             )
             return True, "Unrecognized hotkey"
-        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < 20000:
+        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < lib.MIN_STAKE:
             # Ignore requests from entities with low stake.
             bt.logging.trace(
                 f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
             )
             return True, "Low stake"
-        elif synapse.dendrite.hotkey in BlackList:
+        elif synapse.dendrite.hotkey in lib.BLACKLISTED_VALIDATORS:
             bt.logging.trace(
                 f"Blacklisting Key recognized as blacklisted hotkey {synapse.dendrite.hotkey}"
             )
             return True, "Blacklisted hotkey"
-        else:
+        elif synapse.dendrite.hotkey in lib.WHITELISTED_VALIDATORS:
             bt.logging.trace(
                 f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
             )
             return False, "Hotkey recognized!"
+        else:
+            bt.logging.trace(
+                f"Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Hotkey recognized as Blacklisted!"
 
     # The priority function determines the order in which requests are handled.
     # More valuable or higher-priority requests are processed before others.
@@ -335,22 +339,27 @@ def main(config):
                 f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
             )
             return True, "Unrecognized hotkey"
-        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < 20000:
+        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < lib.MIN_STAKE:
             # Ignore requests from entities with low stake.
             bt.logging.trace(
                 f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
             )
             return True, "Low stake"
-        elif synapse.dendrite.hotkey in BlackList:
+        elif synapse.dendrite.hotkey in lib.BLACKLISTED_VALIDATORS:
             bt.logging.trace(
                 f"Blacklisting Key recognized as blacklisted hotkey {synapse.dendrite.hotkey}"
             )
             return True, "Blacklisted hotkey"
-        else:
+        elif synapse.dendrite.hotkey in lib.WHITELISTED_VALIDATORS:
             bt.logging.trace(
                 f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
             )
             return False, "Hotkey recognized!"
+        else:
+            bt.logging.trace(
+                f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Hotkey recognized as Blacklisted!"
 
     # The priority function determines the order in which requests are handled.
     # More valuable or higher-priority requests are processed before others.
