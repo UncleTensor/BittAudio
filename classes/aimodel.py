@@ -43,7 +43,7 @@ class AIModelService:
         parser.add_argument("--auto_update", default="yes", help="Auto update")
         parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
         parser.add_argument("--hub_key", type=str, default=None, help="Supply the Huggingface Hub API key for prompt dataset")
-        parser.add_argument("--vcdnp", type=int, default=5, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=int, default=10, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
 
         # Add Bittensor specific arguments
@@ -123,7 +123,7 @@ class AIModelService:
             zipped_uids = list(zip(uids, self.metagraph.axons))
             uid_index = list(zip(*filter(lambda x: x[1] == axon, zipped_uids)))[0][0]
             alpha = self.config.alpha
-            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.75)
+            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-1)
             if self.scores[uid_index] < 0:
                 self.scores[uid_index] = 0
             # Log the updated score
