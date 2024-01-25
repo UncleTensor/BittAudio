@@ -52,7 +52,7 @@ class VoiceCloningService(AIModelService):
             # If not, create the directory
             os.makedirs(self.processed_path)
         ###################################### DIRECTORY STRUCTURE ###########################################
-
+        self.filtered_axon = []
         self.filtered_axons = []
         self.response = None
         self.filename = ""
@@ -257,7 +257,7 @@ class VoiceCloningService(AIModelService):
                 torchaudio.save(cloned_file_path, src=audio_data_int, sample_rate=sampling_rate)
                 # Score the output and update the weights
                 score = self.score_output(self.audio_file_path, cloned_file_path, self.text_input)
-                self.update_score(axon, score, service="Voice Cloning")
+                self.update_score(axon, score, service="Voice Cloning", ax=self.filtered_axon)
                 existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
                 for existing_file in existing_wav_files:
                     try:
@@ -289,6 +289,8 @@ class VoiceCloningService(AIModelService):
             
             # Remove the weights of miners that are not queryable.
             queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+            queryable_uid = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip.startswith('64.247.206.') for uid in uids])
+
             active_miners = torch.sum(queryable_uids)
             dendrites_per_query = self.total_dendrites_per_query
 
@@ -306,8 +308,11 @@ class VoiceCloningService(AIModelService):
                     dendrites_per_query = self.minimum_dendrites_per_query
             # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
             zipped_uids = list(zip(uids, queryable_uids))
+            zipped_uid = list(zip(uids, queryable_uid))
             filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
             bt.logging.info(f"filtered_uids for Voice Cloning Service:{filtered_uids}")
+            filtered_uid = list(zip(*filter(lambda x: x[1], zipped_uid)))[0]
+            self.filtered_axon = filtered_uid
             dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
             bt.logging.info(f"Dendrites to be queried for Voice Cloning Service :{dendrites_to_query}")
             return dendrites_to_query

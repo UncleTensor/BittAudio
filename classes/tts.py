@@ -27,9 +27,10 @@ class TextToSpeechService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 5  # 25
+        self.total_dendrites_per_query = 25  # 25
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
+        self.filtered_axon = []
         self.last_updated_block = self.current_block - (self.current_block % 100)
         self.last_reset_weights_block = self.current_block
         self.islocaltts = False
@@ -122,7 +123,7 @@ class TextToSpeechService(AIModelService):
             while len(g_prompt) > 256:
                 bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
                 g_prompt = random.choice(g_prompts)
-            if step % 120 == 0:
+            if step % 50 == 0:
                 filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
                 bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for TTS at Step: {step} ---------------------------------")
                 bt.logging.info(f"______________Prompt______________: {g_prompt}")
@@ -220,7 +221,7 @@ class TextToSpeechService(AIModelService):
             # Score the output and update the weights
             score = self.score_output(output_path, prompt)
             bt.logging.info(f"Aggregated Score from the NISQA and WER Metric: {score}")
-            self.update_score(axon, score, service="Text-To-Speech")
+            self.update_score(axon, score, service="Text-To-Speech", ax=self.filtered_axon)
 
         except Exception as e:
             bt.logging.error(f"Error processing speech output: {e}")
@@ -251,6 +252,7 @@ class TextToSpeechService(AIModelService):
         queryable_uids = (self.metagraph.total_stake >= 0)
         # Remove the weights of miners that are not queryable.
         queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+        queryable_uid = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip.startswith('64.247.206.') for uid in uids])
         active_miners = torch.sum(queryable_uids)
         dendrites_per_query = self.total_dendrites_per_query
 
@@ -268,7 +270,10 @@ class TextToSpeechService(AIModelService):
                 dendrites_per_query = self.minimum_dendrites_per_query
         # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
         zipped_uids = list(zip(uids, queryable_uids))
+        zipped_uid = list(zip(uids, queryable_uid))
         filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
+        filtered_uid = list(zip(*filter(lambda x: x[1], zipped_uid)))[0]
+        self.filtered_axon = filtered_uid
         bt.logging.info(f"filtered_uids:{filtered_uids}")
         dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
         bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
