@@ -6,11 +6,13 @@ In the first phase, we will start with text-to-speech (TTS), working in parallel
 ## Validators
 
 The Validators are responsible for initiating the generation process by providing prompts to the Miners on the network. These prompts serve as the input text for the subsequent TTS model. The Validators evaluate the quality of the generated audio produced by the Miners and reward them based on the perceived quality.
+Please refer to the [Validator Documentation](docs/validator.md).
 
 
 ## Miners
 
 Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validators. Leveraging advanced text-to-speech models, miners aim to produce high-fidelity, natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the miners' rewards.
+Please refer to the [Miner Documentation](docs/miner.md).
 
 ## Workflow
 
@@ -40,6 +42,7 @@ cd AudioSubnet
 git checkout main
 pip install -r requirements.txt
 python -m pip install -e . 
+wandb login
 ```
 
 ## Recommended GPU Configuration
@@ -64,118 +67,13 @@ The code incorporates three text-to-speech models: Microsoft/speecht5_tts, Faceb
 
 In general, the resource demands of text-to-speech models can vary significantly. Larger models often necessitate more powerful GPUs and additional system resources. It is advisable to consult the documentation or model repository for the specific requirements of each model. Additionally, if GPU acceleration is employed, having a compatible GPU with enough VRAM is typically advantageous for faster processing.
 
-## Auto-Update Feature
-
-The Auto-Update feature in the Audio Subnetwork ensures that the software components, including text-to-speech models and other dependencies, remain up-to-date with the latest improvements and bug fixes. This feature is designed to:
-
-1. **Automatically Check for Updates:** Periodically scans for new updates or patches available in the repository.
-2. **Seamless Integration:** Integrates updates without disrupting ongoing processes or requiring manual intervention.
-3. **Enhanced Security and Performance:** By keeping the software up-to-date, it ensures enhanced security and optimal performance.
-4. **User Notification:** Notifies users about the updates being installed, allowing them to be aware of the changes and improvements.
-
-To enable this feature, ensure you `--auto_update` argument with the value `yes`
-
-Below are instructions for using the arguments in `miner.py` and `validator.py`:
-
-# Instructions for `miner.py`:
-
-## Miner Command for running VC ElevenLabs API:
-
-```bash
-python neurons/miner.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --auto_update yes \
-    --clone_model elevenlabs/eleven \
-    --model elevenlabs/eleven \
-    --eleven_api {elevenlabs_api_key} \
-    --axon.port {machine_port}
-
-```
-
-## Miner Command for running VC bark/voiceclone:
-
-```bash
-python neurons/miner.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --auto_update yes \
-    --clone_model bark/voiceclone \
-    --model {model} \
-    --axon.port {machine_port}
-```
-
-### Bittensor Miner Script Arguments:
-
-| **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
-|---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | Default: 'microsoft/speecht5_tts' ; 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
-| **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |
-| **Voice Clone Model** | `--clone_model`                           | Default: 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
-| **ElevenLabs API token** | `--eleven_api`                           |  Mandatory       | The API key to use for ElevenLabs Model |
-| **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
-|                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
-| **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
-| **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
-|                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
-| **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.                                                                                    |
-| **Auto Update Argument**       | `--auto_update`                        | yes                          | Updates the repository                                                                                     |
-
-
-# Instructions for `validator.py`:
 
 ### Voice Clone Service
 Run the validator with the following command, replacing `{wallet_name}`, `{hotkey_name}`, and `{huggingface_access_token}` with your wallet and hotkey names and HuggingFace access token. Place your audio files (e.g., `audio01.wav`) and text files with the corresponding name (e.g., `audio01.txt`) in the `vc_source` folder for custom voice cloning. Once the files are processed, they will be moved to `vc_processed` folder. The voice cloned output will be saved in the `vc_target` folder.
 
-The supported languages for **Voice Clone** include: 
-- English, Polish, German, 
-- Korean, Dutch, Turkish, 
-- Swedish, Indonesian, Vietnamese,  
-- Ukrainian, Greek, Czech,  
-- Finnish, Filipino, - Romanian, 
-- Danish, Bulgarian, Malay, 
-- Hungarian, Norwegian, Slovak, 
-- Croatian, Classic Arabic, Tamil, 
-- Spanish, French, Italian, 
-- Hindi, and Portuguese. 
-
-**Note:** Some languages perform very good while others underperform.
-
 ### Text-to-Speech (TTS) Service
 - For prompts from HuggingFace, set your HuggingFace access token.
 - For custom prompts, place a CSV file named `tts_prompts.csv` in the `tts_source` directory. Audio outputs will be stored in the `tts_target` directory.
-
-**Note:** ElevenLabs Test-To-Speech does not support multiple languages. Only English is supported.
-
-## Validator Command  
-```bash
-python neurons/validator.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --auto_update yes \
-    --hub_key {huggingface_access_token}
-```
-
-### Bittensor Validator Script Arguments:
-
-| **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
-|---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Configuration Arguments**     | `--alpha`                            | 0.9                        | The weight moving average scoring.                                                                                    |
-|                                 | `--netuid`                           |  Mainnet: 16                          | The chain subnet UID.                                                                                                 |
-| **HuggingFace Access Token** | `--hub_key`                          | Mandatory                       | Supply the Huggingface Hub API key for the prompt dataset.                                                            |
-| **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
-|                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
-| **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
-| **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
-|                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
-| **Auto Update Argument**       | `--auto_update`                        | yes                          | Updates the repository                                                                                     |
-
 
 ## License
 This repository is licensed under the MIT License.

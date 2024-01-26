@@ -4,12 +4,14 @@ import random
 import sys
 import lib
 import time
+import wandb
 import torch
 import soundfile as sf
 import asyncio
 import traceback
 import torchaudio
 import bittensor as bt
+import datetime as dt
 from tabulate import tabulate
 from datasets import load_dataset
 import lib.protocol
@@ -34,6 +36,8 @@ class VoiceCloningService(AIModelService):
         self.load_vc_voices()
         self.total_dendrites_per_query = self.vcdnp  # Example value, adjust as needed
         self.minimum_dendrites_per_query = 5  # Example value, adjust as needed
+        self.last_run_date = dt.date.today()
+        self.tao = self.metagraph.neurons[self.uid].stake.tao
 
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.source_path = os.path.join(audio_subnet_path, "vc_source")
@@ -70,10 +74,40 @@ class VoiceCloningService(AIModelService):
             self.audio_files = [item['audio'] for item in dataset['train']]
             return self.audio_files
 
+    def check_and_update_wandb_run(self):
+        current_date = dt.date.today()
+        if current_date > self.last_run_date:
+            self.last_run_date = current_date
+            if self.wandb_run:
+                wandb.finish()  # End the current run
+            self.new_wandb_run()  # Start a new run
+
+    def new_wandb_run(self):
+        now = dt.datetime.now()
+        run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
+        name = f"Validator-{self.uid}-{run_id}"
+        self.wandb_run = wandb.init(
+            name=name,
+            project="AudioSubnet_Valid",
+            entity="subnet16team",
+            config={
+                "uid": self.uid,
+                "hotkey": self.wallet.hotkey.ss58_address,
+                "run_name": run_id,
+                "type": "Validator",
+                "tao (stake)": self.tao,
+            },
+            tags=self.sys_info,
+            allow_val_change=True,
+            anonymous="allow",
+        )
+        bt.logging.debug(f"Started a new wandb run: {name}")
+
     async def run_async(self):
         step = 0
         running_tasks = []
         while True:
+            self.check_and_update_wandb_run()
             try:
                 new_tasks = await self.main_loop_logic(step)
                 running_tasks.extend(new_tasks)
@@ -309,10 +343,12 @@ class VoiceCloningService(AIModelService):
             # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
             zipped_uids = list(zip(uids, queryable_uids))
             zipped_uid = list(zip(uids, queryable_uid))
-            filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
-            bt.logging.info(f"filtered_uids for Voice Cloning Service:{filtered_uids}")
-            filtered_uid = list(zip(*filter(lambda x: x[1], zipped_uid)))[0]
+            filtered_zipped_uids = list(filter(lambda x: x[1], zipped_uids))
+            filtered_uids = [item[0] for item in filtered_zipped_uids] if filtered_zipped_uids else []
+            filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
+            filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
             self.filtered_axon = filtered_uid
+            bt.logging.info(f"filtered_uids:{filtered_uids}")
             dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
             bt.logging.info(f"Dendrites to be queried for Voice Cloning Service :{dendrites_to_query}")
             return dendrites_to_query

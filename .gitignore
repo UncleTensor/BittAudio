@@ -6,6 +6,7 @@
 *.csv
 *.txt
 *.npz
+wandb/
 !models/sample3.wav
 !requirements.txt
 

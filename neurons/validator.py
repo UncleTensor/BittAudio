@@ -31,7 +31,7 @@ audio_subnet_path = os.path.abspath(project_root)
 # Add the project root and 'AudioSubnet' directories to sys.path
 sys.path.insert(0, project_root)
 sys.path.insert(0, audio_subnet_path)
-from classes.tts import TextToSpeechService #,AIModelService
+from classes.tts import TextToSpeechService 
 from classes.vc import VoiceCloningService
 
 
@@ -39,7 +39,10 @@ from classes.vc import VoiceCloningService
 async def main():
     # AIModelService()
     tts_service = TextToSpeechService()
+    tts_service.new_wandb_run()
+
     vc_service = VoiceCloningService()
+    vc_service.new_wandb_run()
 
     # Start vc_service with higher "priority"
     vc_task = asyncio.create_task(vc_service.run_async())

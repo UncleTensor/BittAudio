@@ -14,6 +14,8 @@ import lib
 import traceback
 import pandas as pd
 import sys
+import wandb
+import datetime as dt
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # Set the 'AudioSubnet' directory path
@@ -35,6 +37,8 @@ class TextToSpeechService(AIModelService):
         self.last_reset_weights_block = self.current_block
         self.islocaltts = False
         self.p_index = 0
+        self.last_run_date = dt.date.today()
+        self.tao = self.metagraph.neurons[self.uid].stake.tao
         
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.tts_source_dir = os.path.join(audio_subnet_path, "tts_source")
@@ -61,15 +65,45 @@ class TextToSpeechService(AIModelService):
             bt.logging.info(f"Loaded prompts from {self.tts_source_dir}")
             os.remove(os.path.join(self.tts_source_dir, 'tts_prompts.csv'))
         
+    def check_and_update_wandb_run(self):
+        current_date = dt.date.today()
+        if current_date > self.last_run_date:
+            self.last_run_date = current_date
+            if self.wandb_run:
+                wandb.finish()  # End the current run
+            self.new_wandb_run()  # Start a new run
+
+    def new_wandb_run(self):
+        now = dt.datetime.now()
+        run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
+        name = f"Validator-{self.uid}-{run_id}"
+        self.wandb_run = wandb.init(
+            name=name,
+            project="AudioSubnet_Valid",
+            entity="subnet16team",
+            config={
+                "uid": self.uid,
+                "hotkey": self.wallet.hotkey.ss58_address,
+                "run_name": run_id,
+                "type": "Validator",
+                "tao (stake)": self.tao,
+            },
+            tags=self.sys_info,
+            allow_val_change=True,
+            anonymous="allow",
+        )
+        bt.logging.debug(f"Started a new wandb run: {name}")
+
     async def run_async(self):
         step = 0
 
         while True:
+            self.check_and_update_wandb_run()
             try:
                 await self.main_loop_logic(step)
                 step += 1
                 await asyncio.sleep(0.5)  # Adjust the sleep time as needed
-                if step % 50 == 0 and self.config.auto_update == "yes":
+                if step % 50 == 0:
                     lib.utils.try_update()
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting TextToSpeechService.")
@@ -271,8 +305,10 @@ class TextToSpeechService(AIModelService):
         # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
         zipped_uids = list(zip(uids, queryable_uids))
         zipped_uid = list(zip(uids, queryable_uid))
-        filtered_uids = list(zip(*filter(lambda x: x[1], zipped_uids)))[0]
-        filtered_uid = list(zip(*filter(lambda x: x[1], zipped_uid)))[0]
+        filtered_zipped_uids = list(filter(lambda x: x[1], zipped_uids))
+        filtered_uids = [item[0] for item in filtered_zipped_uids] if filtered_zipped_uids else []
+        filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
+        filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
         self.filtered_axon = filtered_uid
         bt.logging.info(f"filtered_uids:{filtered_uids}")
         dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
