@@ -59,7 +59,6 @@ python neurons/miner.py \
 | **Text To Speech Model**    | `--model`                            | Default: 'microsoft/speecht5_tts' ; 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.                                                                                 |
 | **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |
 | **Voice Clone Model** | `--clone_model`                           | Default: 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
-| **ElevenLabs API token** | `--eleven_api`                           |  Export to environment variable       | The API key to use for ElevenLabs Model |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.                                                                              |
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.                                                                                          |
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
