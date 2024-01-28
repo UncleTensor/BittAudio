@@ -19,7 +19,7 @@
 
 # TODO(developer): Change this value when updating your code base.
 # Define the version of the lib module.
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 version_split = __version__.split(".")
 __spec_version__ = (
     (1000 * int(version_split[0]))
@@ -27,6 +27,8 @@ __spec_version__ = (
     + (1 * int(version_split[2]))
 )
 
+BLACKLISTED_IPS_SEG = ['194.68.245.','64.247.206.', '89.187.159.','38.147.83.','192.248.156.', '108.61.172.']
+BLACKLISTED_IPS = ['149.36.0.176','149.36.0.89', '213.173.98.197','69.30.85.17', '213.173.98.197', '149.36.0.35','13.59.188.112']
 
 BLACKLISTED_VALIDATORS = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe','5Dz8ShM6rtPw1GBAaqxjycT9LF1TC3iDpzpUH9gKr85Nizo6']
 legit_validators = ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3',

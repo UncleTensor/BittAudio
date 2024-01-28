@@ -26,6 +26,7 @@ import torch
 import git
 import subprocess
 import codecs
+import wandb
 
 def version2number(version):
     return int(version.replace('.', '').replace('-', '').replace('_', ''))
@@ -120,7 +121,7 @@ def version2number(version_string):
 
 def restart_app():
     bt.logging.info("App restarted due to the update")
-    
+    wandb.finish()
     python = sys.executable
     os.execl(python, python, *sys.argv)
     

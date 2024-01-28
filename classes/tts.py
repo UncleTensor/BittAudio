@@ -286,7 +286,11 @@ class TextToSpeechService(AIModelService):
         queryable_uids = (self.metagraph.total_stake >= 0)
         # Remove the weights of miners that are not queryable.
         queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
-        queryable_uid = queryable_uids * torch.Tensor([any(self.metagraph.neurons[uid].axon_info.ip.startswith(prefix) for prefix in ['194.68.245.','64.247.206.', '89.187.159.','38.147.83.'])for uid in uids])
+        queryable_uid = queryable_uids * torch.Tensor([
+            any(self.metagraph.neurons[uid].axon_info.ip == ip for ip in lib.BLACKLISTED_IPS) or
+            any(self.metagraph.neurons[uid].axon_info.ip.startswith(prefix) for prefix in lib.BLACKLISTED_IPS_SEG)
+            for uid in uids
+        ])
         active_miners = torch.sum(queryable_uids)
         dendrites_per_query = self.total_dendrites_per_query
 
