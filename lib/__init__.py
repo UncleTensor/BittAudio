@@ -19,7 +19,7 @@
 
 # TODO(developer): Change this value when updating your code base.
 # Define the version of the lib module.
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 version_split = __version__.split(".")
 __spec_version__ = (
     (1000 * int(version_split[0]))
@@ -28,8 +28,22 @@ __spec_version__ = (
 )
 
 
-BLACKLISTED_IPS_SEG = ['194.68.245.','64.247.206.', '89.187.159.','38.147.83.','192.248.156.', '108.61.172.','149.36.0.']
-BLACKLISTED_IPS = ['149.36.0.176','149.36.0.89', '213.173.98.197','69.30.85.17', '213.173.98.197', '149.36.0.35','13.59.188.112','94.101.98.211','192.248.156.192','108.61.172.122']
+BLACKLISTED_IPS_SEG = []
+BLACKLISTED_IPS = []
+
+BLACKLISTED_MINER_COLDKEYS = ['5E2RHBCtUcbw5KTGvMWfeaUXKrmcrDVvqYb7EWmZzqfbFHBH',
+    '5Dq1CKGLEdquzy4cr63y39qsmZxZ2g5rSbxnkpLrHXVwXWoV',
+    '5FCZ8g13LsRdASt3rfwEfQZ9iDkDDhoUvScCSFRqocss2ukP',
+    '5CyFQsNqNkGuFsWwbjS3TMW7wLtzAQBKfL4qya7HYhFX1h2s',
+    '5FLF7CKccooocsgSDqDRAqFUktr9LwYK8ALbbZ2FJzmLpJXx',
+    '5FcQHaUjQnJNnRH2ZM9buA4PcxYaQCx79BNSCaPVn17EztMh',
+    '5FqVJrW2jCg2d8nBqrZaivy3SxE2MYUtU2o68FjFwoMdxjG4',
+    '5HeP2f5mSqTJVXwYTUtt98efSGRb7JpFySdny63erdUA9FSd',
+    '5FKwEVKAzVieNyajbPEiyoYGNQYwKX1sLoe3EqZK9Bu3Kcxx',
+    '5G6Aq86k3vFnUBA1ChJGJypz2QprKJgmFtv1mNHavEG9XmQ7',
+    '5GEz9ZQXVkAupXi7br8HtxjVCbCwEWsx6wGJkzg9mPsu9qTG',]
+
+BLACKLISTED_MINER_HOTKEYS = []
 
 BLACKLISTED_VALIDATORS = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe','5Dz8ShM6rtPw1GBAaqxjycT9LF1TC3iDpzpUH9gKr85Nizo6']
 legit_validators = ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3',
