@@ -19,7 +19,7 @@
 
 # TODO(developer): Change this value when updating your code base.
 # Define the version of the lib module.
-__version__ = "2.0.4"
+__version__ = "2.0.5"
 version_split = __version__.split(".")
 __spec_version__ = (
     (1000 * int(version_split[0]))
@@ -41,7 +41,10 @@ BLACKLISTED_MINER_COLDKEYS = ['5E2RHBCtUcbw5KTGvMWfeaUXKrmcrDVvqYb7EWmZzqfbFHBH'
     '5HeP2f5mSqTJVXwYTUtt98efSGRb7JpFySdny63erdUA9FSd',
     '5FKwEVKAzVieNyajbPEiyoYGNQYwKX1sLoe3EqZK9Bu3Kcxx',
     '5G6Aq86k3vFnUBA1ChJGJypz2QprKJgmFtv1mNHavEG9XmQ7',
-    '5GEz9ZQXVkAupXi7br8HtxjVCbCwEWsx6wGJkzg9mPsu9qTG',]
+    '5GEz9ZQXVkAupXi7br8HtxjVCbCwEWsx6wGJkzg9mPsu9qTG',
+    '5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe',
+    '5Dz8ShM6rtPw1GBAaqxjycT9LF1TC3iDpzpUH9gKr85Nizo6',
+    ]
 
 BLACKLISTED_MINER_HOTKEYS = []
 
