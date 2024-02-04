@@ -86,6 +86,7 @@ class VoiceCloningService(AIModelService):
         now = dt.datetime.now()
         run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
         name = f"Validator-{self.uid}-{run_id}"
+        commit = self.get_git_commit_hash()
         self.wandb_run = wandb.init(
             name=name,
             project="AudioSubnet_Valid",
@@ -96,6 +97,7 @@ class VoiceCloningService(AIModelService):
                 "run_name": run_id,
                 "type": "Validator",
                 "tao (stake)": self.tao,
+                "commit": commit,
             },
             tags=self.sys_info,
             allow_val_change=True,

@@ -47,6 +47,7 @@ import platform
 import psutil
 import GPUtil
 import datetime as dt
+import subprocess
 
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -168,6 +169,16 @@ def main(config):
             f"\nYour miner: {wallet} is not registered to chain connection: {subtensor} \nRun btcli register and try again. "
         )
         exit()
+
+    def get_git_commit_hash():
+        try:
+            # Run the git command to get the current commit hash
+            commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+            return commit_hash
+        except subprocess.CalledProcessError:
+            # If the git command fails, for example, if this is not a git repository
+            bt.logging.error("Failed to get git commit hash. '.git' folder is missing")
+            return None
     
     def get_system_info():
         system_info = {
@@ -191,6 +202,7 @@ def main(config):
     run_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     name = f"Miner-{my_subnet_uid}-{run_id}"
     sys_info = get_system_info()
+    commit = get_git_commit_hash()
 
     if use_wandb:
         wandb.init(
@@ -202,11 +214,11 @@ def main(config):
                 "hotkey": wallet.hotkey.ss58_address,
                 "run_name": run_id,
                 "type": "miner",
+                "commit": commit,
                 },
                 allow_val_change=True,
                 tags=sys_info
             )
-
 ############################### Voice Clone ##########################################
 
     # The blacklist function decides if a request should be ignored.

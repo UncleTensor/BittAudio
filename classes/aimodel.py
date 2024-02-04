@@ -18,6 +18,7 @@ import traceback
 import platform
 import psutil
 import GPUtil
+import subprocess
 
 class AIModelService:
     _scores = None
@@ -155,5 +156,15 @@ class AIModelService:
         except Exception as e:
             print(f"An error occurred while punishing the axon: {e}")
 
+    def get_git_commit_hash(self):
+        try:
+            # Run the git command to get the current commit hash
+            commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+            return commit_hash
+        except subprocess.CalledProcessError:
+            # If the git command fails, for example, if this is not a git repository
+            bt.logging.error("Failed to get git commit hash. '.git' folder is missing")
+            return None
+        
     async def run_async(self):
         raise NotImplementedError
