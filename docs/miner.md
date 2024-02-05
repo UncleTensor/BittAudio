@@ -65,6 +65,7 @@ python neurons/miner.py \
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 | **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.                                                                                    |
+| **Auto update repository**    | `--auto_update`                        | 'yes'                          | Auto update option for github repository updates.                                                                                    |
 
 
 ### License

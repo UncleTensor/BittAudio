@@ -79,6 +79,8 @@ def get_config():
     parser.add_argument(
         "--eleven_api", default=os.getenv('ELEVEN_API') , help="API key to be used for Eleven Labs." 
     )
+    parser.add_argument("--auto_update", type=str, default='yes', help="Auto update option for github repository updates.")
+
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
     bt.subtensor.add_args(parser)
@@ -560,7 +562,7 @@ def main(config):
             step += 1
             time.sleep(1)
 
-            if step % 1000 == 0:
+            if step % 1000 == 0 and config.auto_update == 'yes':
                 lib.utils.try_update()
 
         # If someone intentionally stops the miner, it'll safely terminate operations.

@@ -105,7 +105,7 @@ class TextToSpeechService(AIModelService):
                 await self.main_loop_logic(step)
                 step += 1
                 await asyncio.sleep(0.5)  # Adjust the sleep time as needed
-                if step % 50 == 0:
+                if step % 50 == 0 and self.config.auto_update == 'yes':
                     lib.utils.try_update()
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting TextToSpeechService.")
@@ -188,7 +188,10 @@ class TextToSpeechService(AIModelService):
         if self.current_block - self.last_updated_block > 100:
             bt.logging.info(f"Updating weights. Last update was at block {self.last_updated_block}")
             bt.logging.info(f"Current block is {self.current_block}")
-            self.update_weights(self.scores)
+            if self.uid not in self.old_valids:
+                self.update_weights(self.scores)
+            else:
+                bt.logging.error(f"Validator's repository is not up-to-date. Skipping weight update. Validator cannot update weights. Please update your repository to the latest version.")
             self.last_updated_block = self.current_block
         else:
             bt.logging.info(f"Updating weights. Last update was at block:  {self.last_updated_block}")
@@ -317,6 +320,8 @@ class TextToSpeechService(AIModelService):
         filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
         self.filtered_axon = filtered_uid
         bt.logging.info(f"filtered_uids:{filtered_uids}")
+        filtered_uids = [uid for uid in filtered_uids if uid not in self.runs_data]
+        bt.logging.info(f"filtered_uids after removing the uids without latest commit hash :{filtered_uids}")
         dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
         bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
         return dendrites_to_query

@@ -40,6 +40,7 @@ python neurons/validator.py \
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
+| **Auto update repository**    | `--auto_update`                        | 'yes'                          | Auto update option for github repository updates.                                                                                    |
 
 ### License
 Refer to the main README for the MIT License details.

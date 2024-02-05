@@ -19,6 +19,9 @@ import platform
 import psutil
 import GPUtil
 import subprocess
+import requests
+import wandb
+
 
 class AIModelService:
     _scores = None
@@ -38,6 +41,11 @@ class AIModelService:
             AIModelService._scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.scores = AIModelService._scores
         self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+        self.api = wandb.Api()
+        self.project_path_miner = "subnet16team/AudioSubnet_Miner"
+        self.project_path_valid = "subnet16team/AudioSubnet_Valid"
+        self.runs_data = self.filtered_uids_without_commit()
+        self.old_valids = self.valids_without_commit()
 
     def get_config(self):
         parser = argparse.ArgumentParser()
@@ -48,6 +56,7 @@ class AIModelService:
         parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
         parser.add_argument("--vcdnp", type=int, default=10, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
+        parser.add_argument("--auto_update", type=str, default='yes', help="Auto update option for github repository updates.")
 
         # Add Bittensor specific arguments
         bt.subtensor.add_args(parser)
@@ -166,5 +175,54 @@ class AIModelService:
             bt.logging.error("Failed to get git commit hash. '.git' folder is missing")
             return None
         
+    def get_latest_commit(self, owner, repo):
+        url = f"https://api.github.com/repos/{owner}/{repo}/commits"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            commits = response.json()
+            return commits[0]['sha'] if commits else None
+        else:
+            print(f"Failed to get the latest commit. Status code: {response.status_code}")
+            return None
+
+    def filtered_uids_without_commit(self):
+        latest_commit = self.get_latest_commit(owner="UncleTensor", repo="AudioSubnet")
+        if not latest_commit:
+            bt.logging.error("Failed to get the latest commit hash.")
+            return []
+        
+        runs_data_set = set()
+        runs = self.api.runs(self.project_path_miner)
+        for run in runs:
+            if run.state == 'running':
+                run_commit = run.config.get('commit', '')
+                if run_commit != latest_commit:
+                    uid = run.config.get('uid', None)
+                    if uid:
+                        runs_data_set.add(uid)
+        
+        runs_data = list(runs_data_set)
+        return runs_data
+    
+    def valids_without_commit(self):
+        latest_commit = self.get_latest_commit(owner="UncleTensor", repo="AudioSubnet")
+        if not latest_commit:
+            bt.logging.error("Failed to get the latest commit hash.")
+            return []
+        
+        runs_data_set = set()
+        runs = self.api.runs(self.project_path_valid)
+        for run in runs:
+            if run.state == 'running':
+                run_commit = run.config.get('commit', '')
+                if run_commit != latest_commit:
+                    uid = run.config.get('uid', None)
+                    if uid:
+                        runs_data_set.add(uid)
+        
+        runs_data = list(runs_data_set)
+        return runs_data
+    
     async def run_async(self):
         raise NotImplementedError
