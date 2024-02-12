@@ -255,8 +255,8 @@ def main(config):
     def start_wandb_run():
         wandb.init(
             name=name,
-            project="subnet16", 
-            entity="testingforsubnet16",
+            project="AudioSubnet_Miner", 
+            entity="subnet16team",
             config={
                 "uid": my_subnet_uid,
                 "hotkey": wallet.hotkey.ss58_address,
