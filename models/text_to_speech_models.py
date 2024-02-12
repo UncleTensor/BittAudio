@@ -58,41 +58,44 @@ class SpeakerRecognizer:
     
 # Text-to-Speech Synthesis with Customizable Speaker Embeddings
 class TextToSpeechModels:
-    def __init__(self):
-        # Load the models and processor
-        self.processor = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
-        self.model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
-        self.vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
+    def __init__(self, model_path="microsoft/speecht5_tts", vocoder_model_path="microsoft/speecht5_hifigan"):
+        # Load the models and processor with support for overriding the model path
+        self.processor = SpeechT5Processor.from_pretrained(model_path)
+        self.model = SpeechT5ForTextToSpeech.from_pretrained(model_path)
+        self.vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_path)
         
         # Initialize SpeakerRecognizer
         self.speaker_recognizer = SpeakerRecognizer()
 
         # Move models to GPU if available
-        self.device = torch.device("cuda")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+        self.vocoder.to(self.device)
+        
     def generate_speech(self, text_input, audio_file_path=None):
         # Process the text input
-        inputs = self.processor(text=text_input, return_tensors="pt")
+        inputs = self.processor(text=text_input, return_tensors="pt").to(self.device)
 
         # Generate speaker embeddings from the provided audio file
         if audio_file_path:
-            speaker_embeddings = self.speaker_recognizer.create_speaker_embedding(audio_file_path = 'sample3.wav')
+            speaker_embeddings = self.speaker_recognizer.create_speaker_embedding(audio_file_path)
         else:
             # Use default embeddings if no audio file is provided
             embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-            random_integer = torch.randint(0, 7931, (1,)).item()
-            speaker_embeddings = torch.tensor(embeddings_dataset[random_integer]["xvector"]).unsqueeze(0)
+            random_integer = torch.randint(0, len(embeddings_dataset), (1,)).item()
+            speaker_embeddings = torch.tensor(embeddings_dataset[random_integer]["xvector"]).unsqueeze(0).to(self.device)
 
         # Generate speech
-        speech = self.model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=self.vocoder)
-        return speech
+        generated_speech = self.model.generate(inputs["input_ids"], speaker_embeddings= speaker_embeddings, vocoder=self.vocoder)
+        return generated_speech
 
 
 # Text-to-Speech Generation Using Suno Bark's Pretrained Model
 class SunoBark:
-    def __init__(self):
+    def __init__(self, model_path="suno/bark"):
         #Load the processor and model
-        self.processor = AutoProcessor.from_pretrained("suno/bark")
-        self.model = BarkModel.from_pretrained("suno/bark")
+        self.processor = AutoProcessor.from_pretrained(model_path)
+        self.model = BarkModel.from_pretrained(model_path)
         self.device = torch.device("cuda")
         self.speaker_list = ["v2/en_speaker_0","v2/en_speaker_1","v2/en_speaker_2","v2/en_speaker_3","v2/en_speaker_4","v2/en_speaker_5","v2/en_speaker_6","v2/en_speaker_7","v2/en_speaker_8","v2/en_speaker_9"]
         self.model.to(self.device)
@@ -110,9 +113,9 @@ class SunoBark:
     
 
 class EnglishTextToSpeech:
-    def __init__(self):
-        self.model = VitsModel.from_pretrained("facebook/mms-tts-eng")
-        self.tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-eng")
+    def __init__(self, model_path="facebook/mms-tts-eng"):
+        self.model = VitsModel.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.device = torch.device("cuda")
 
 

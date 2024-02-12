@@ -14,6 +14,8 @@ Please refer to the [Validator Documentation](docs/validator.md).
 Miners in the Audio Subnetwork are tasked with generating audio from the text prompts received from the Validators. Leveraging advanced text-to-speech models, miners aim to produce high-fidelity, natural-sounding voice recordings. The quality of the generated audio is crucial, as it directly influences the miners' rewards.
 Please refer to the [Miner Documentation](docs/miner.md).
 
+## Benchmarks
+For comprehensive benchmarks and performance evaluations, please refer to the [Benchmark Documentation](docs/benchmark.md).
 ## Workflow
 
 1. **Prompt Generation:** The Validators generates prompts and distributes them to the Miners on the network.
@@ -40,6 +42,7 @@ Join the Audio Subnetwork and contribute to the advancement of decentralized tex
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubnet
 git checkout main
+pip install -e fseq/
 pip install -r requirements.txt
 python -m pip install -e . 
 wandb login
@@ -47,7 +50,7 @@ wandb login
 
 ## Recommended GPU Configuration
 
-For optimal performance, it is recommended to use NVIDIA GeForce RTX 3090 GPUs for both Validators and Miners.
+For optimal performance, it is recommended to use NVIDIA GeForce RTX 4090 GPUs for both Validators and Miners.
 
 
 **Evaluation Mechanism:**

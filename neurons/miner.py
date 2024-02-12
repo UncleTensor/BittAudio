@@ -60,6 +60,7 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, audio_subnet_path)
 
 # import this repo
+from models.text_to_music import MusicGenerator
 from models.text_to_speech_models import SunoBark, TextToSpeechModels, ElevenLabsTTS, EnglishTextToSpeech
 from models.voice_clone import ElevenLabsClone  
 from models.bark_voice_clone import BarkVoiceCloning, ModelLoader
@@ -71,14 +72,36 @@ import lib
 def get_config():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model", default= 'microsoft/speecht5_tts' , help="The model to be used for text-to-speech." 
+        "--model", default='', help="The model to be used for text-to-speech." 
+    )
+    parser.add_argument(
+        "--ms_model_path", default=None , help="The microsoft tts model to be used for text-to-speech." 
+    )
+    parser.add_argument(
+        "--fb_model_path", default=None , help="The facebook tts model to be used for text-to-speech." 
+    )
+    parser.add_argument(
+        "--bark_model_path", default=None , help="The bark tts model to be used for text-to-speech." 
     )
     parser.add_argument(
         "--clone_model", default= 'bark/voiceclone' , help="The model to be used for Voice cloning." 
     )
     parser.add_argument(
+        "--music_model", default='facebook/musicgen-medium' , help="The model to be used for Music Generation." 
+    )
+    parser.add_argument(
+        "--music_path", default=None , help="The Finetuned model to be used for Music Generation." 
+    )
+    parser.add_argument(
         "--eleven_api", default=os.getenv('ELEVEN_API') , help="API key to be used for Eleven Labs." 
     )
+    parser.add_argument(
+        "--bark_vc_path", default=None, help="Custom directory path for the Bark Voice Clone model."
+    )
+    parser.add_argument(
+        "--auto_update", type=str, default='yes', help="Auto update option for github repository updates."
+    )
+
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
     bt.subtensor.add_args(parser)
@@ -124,27 +147,53 @@ def main(config):
     # Check the supplied model and log the appropriate information.
     # =========================================== Text To Speech model selection ============================================ 
     try:
-        if config.model == "microsoft/speecht5_tts":
-            bt.logging.info("Using the TextToSpeechModels with the supplied model: microsoft/speecht5_tts")
-            tts_models = TextToSpeechModels()
-        elif config.model == "facebook/mms-tts-eng":
-            bt.logging.info("Using the English Text-to-Speech with the supplied model: facebook/mms-tts-eng")
-            tts_models = EnglishTextToSpeech()
-        elif config.model == "suno/bark":
-            bt.logging.info("Using the SunoBark with the supplied model: suno/bark")
-            tts_models = SunoBark()
-        elif config.model == "elevenlabs/eleven" and config.eleven_api is not None:
-            bt.logging.info(f"Using the Text-To-Speech with the supplied model: {config.model}")
-            tts_models = ElevenLabsTTS(config.eleven_api)
+        if config.ms_model_path or config.model == "microsoft/speecht5_tts":
+            model_path = config.ms_model_path if config.ms_model_path else config.model
+            tts_models = TextToSpeechModels(model_path=model_path)
+            bt.logging.info(f"Using the Microsoft TTS model from: {model_path}")
+
+        elif config.fb_model_path or config.model == "facebook/mms-tts-eng":
+            model_path = config.fb_model_path if config.fb_model_path else config.model
+            tts_models = EnglishTextToSpeech(model_path=model_path)
+            bt.logging.info(f"Using the Facebook TTS model from: {model_path}")
+
+        elif config.bark_model_path or config.model == "suno/bark":
+            model_path = config.bark_model_path if config.bark_model_path else config.model
+            tts_models = SunoBark(model_path=model_path)
+            bt.logging.info(f"Using the SunoBark model from: {model_path}")
+
+        elif config.model == "elevenlabs/eleven":
+            if config.eleven_api is not None:
+                tts_models = ElevenLabsTTS(config.eleven_api)
+                bt.logging.info("Using the Eleven Labs TTS model.")
+            else:
+                bt.logging.error("Eleven Labs API key is required for the model: elevenlabs/eleven")
+                raise ValueError("API key required for Eleven Labs model.")
         else:
-            bt.logging.error(f"Eleven Labs API key is required for the model: {config.model}")
-            exit(1)     
+            bt.logging.error("No valid model configuration found.")
+            raise ValueError("Invalid model configuration.")
+
     # =========================================== Text To Speech model selection ============================================
-            
+    
+    # =========================================== Text To Music model selection ============================================
+        # Assuming `config` is an object holding command-line arguments
+        if config.music_path:
+            bt.logging.info(f"Using the custom model path for Text-To-Music: {config.music_path}")
+            ttm_models = MusicGenerator(model_path=config.music_path)
+        elif config.music_model in ["facebook/musicgen-medium", "facebook/musicgen-large"]:
+            bt.logging.info(f"Using the Text-To-Music with the supplied model: {config.music_model}")
+            ttm_models = MusicGenerator(model_path=config.music_model)
+        else:
+            bt.logging.error(f"Wrong model supplied for Text-To-Music: {config.music_model}")
+            exit(1)
+    # =========================================== Text To Music model selection ============================================
+                        
     # =========================================== Voice Clone model selection ===============================================    
-        if config.clone_model == "bark/voiceclone":
-            bt.logging.info("Using the Voice Clone with the supplied model: bark/voiceclone")
-            voice_clone_model = ModelLoader()
+        if config.bark_vc_path or config.clone_model == "bark/voiceclone":
+            bt.logging.info(f"Checking the path of the model supplies: {config.bark_vc_path}")
+            bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
+            bark_vc_model = config.bark_vc_path if config.bark_vc_path else None
+            voice_clone_model = ModelLoader(model_dir=bark_vc_model)
         elif config.clone_model is not None and config.clone_model == "elevenlabs/eleven" and config.eleven_api is not None:
             bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
             voice_clone_model = ElevenLabsClone(config.eleven_api)
@@ -195,7 +244,6 @@ def main(config):
         tags.append(lib.__version__)
         return tags
 
-    use_wandb = True
     # Each miner gets a unique identity (UID) in the network for differentiation.
     my_subnet_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
     bt.logging.info(f"Running miner on uid: {my_subnet_uid}")
@@ -204,11 +252,11 @@ def main(config):
     sys_info = get_system_info()
     commit = get_git_commit_hash()
 
-    if use_wandb:
+    def start_wandb_run():
         wandb.init(
             name=name,
-            project="AudioSubnet_Miner", 
-            entity="subnet16team",
+            project="subnet16", 
+            entity="testingforsubnet16",
             config={
                 "uid": my_subnet_uid,
                 "hotkey": wallet.hotkey.ss58_address,
@@ -219,6 +267,9 @@ def main(config):
                 allow_val_change=True,
                 tags=sys_info
             )
+    start_wandb_run()  # Start the first WandB run
+    start_time = time.time()  # Mark the start time
+
 ############################### Voice Clone ##########################################
 
     # The blacklist function decides if a request should be ignored.
@@ -306,7 +357,7 @@ def main(config):
         try:
             bvc = BarkVoiceCloning()
             speech = bvc.clone_voice(text, hf_voice_id, source_file, voice_clone_model )
-            bark_clone_file_path = "bark_voice_gen.wav"
+            bark_clone_file_path = "bark_voice_gen.wav" # synapse.dendrite.hotkey + "_bark_voice_gen.wav"
             write_wav(bark_clone_file_path, rate=24000, data=speech)
             return bark_clone_file_path
         except Exception as e:
@@ -343,7 +394,7 @@ def main(config):
             input_tensor = torch.tensor(input_clone, dtype=torch.float32)
             if input_tensor.ndim == 1:
                 input_tensor = input_tensor.unsqueeze(0)
-            torchaudio.save('input.wav', src=input_tensor, sample_rate=sample_rate)
+            torchaudio.save('input.wav', src=input_tensor, sample_rate=sample_rate) # synapse.dendrite.hotkey + "_input.wav"
 
             # Check if the input text is valid.
             if input_text is None or input_text == "":
@@ -423,25 +474,22 @@ def main(config):
 
     def ProcessSpeech(synapse: lib.protocol.TextToSpeech) -> lib.protocol.TextToSpeech:
         bt.logging.success("The prompt received from validator!")
-        if config.model == "microsoft/speecht5_tts":
+        if config.ms_model_path or config.model == "microsoft/speecht5_tts":
             speech = tts_models.generate_speech(synapse.text_input)
         elif config.model == "elevenlabs/eleven":
             speech = tts_models.generate_speech(synapse.text_input)
-        elif config.model == "suno/bark":
+        elif config.bark_model_path or config.model == "suno/bark":
             speech = tts_models.generate_speech(synapse.text_input)
-        elif config.model == "facebook/mms-tts-eng":
+        elif config.fb_model_path or config.model == "facebook/mms-tts-eng":
             speech = tts_models.generate_speech(synapse.text_input)
             audio_data = speech / torch.max(torch.abs(speech))
-
             # If the audio is mono, ensure it has a channel dimension
             if audio_data.ndim == 1:
                 audio_data = audio_data.unsqueeze(0)
-
             # convert to 32-bit PCM
             audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
-
             # Save the audio data as integers
-            torchaudio.save('speech.wav', src=audio_data_int, sample_rate=16000)
+            torchaudio.save('speech.wav', src=audio_data_int, sample_rate=16000) # synapse.dendrite.hotkey + "_speech.wav"
             # Open the WAV file and read the frames
             sample_width = None
             try:
@@ -458,12 +506,10 @@ def main(config):
                 dtype = np.int8
             elif sample_width == 4:
                 dtype = np.int32
-
             # Check if dtype has been assigned a value
             if dtype is None:
                 print(f"Unexpected sample width: {sample_width}")
                 return
-
             # Convert the bytes data to a numpy array
             audio_array = np.frombuffer(frames, dtype=dtype)
             # Convert the numpy array to a list
@@ -476,7 +522,7 @@ def main(config):
         else:
             try:
                 bt.logging.success(f"Text to Speech has been generated by {config.model}!")
-                if config.model == "facebook/mms-tts-eng":
+                if config.fb_model_path or config.model == "facebook/mms-tts-eng":
                     # Convert the list to a tensor
                     speech_tensor = torch.Tensor(speech)
 
@@ -509,6 +555,91 @@ def main(config):
             except Exception as e:
                 print(f"An error occurred while processing speech output: {e}")
 
+########################################### Text to Music ##########################################    
+
+    # The blacklist function decides if a request should be ignored.
+    def music_blacklist_fn(synapse: lib.protocol.MusicGeneration) -> typing.Tuple[bool, str]:
+        if synapse.dendrite.hotkey not in metagraph.hotkeys:
+            # Ignore requests from unrecognized entities.
+            bt.logging.trace(
+                f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Unrecognized hotkey"
+        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < lib.MIN_STAKE:
+            # Ignore requests from entities with low stake.
+            bt.logging.trace(
+                f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
+            )
+            return True, "Low stake"
+        elif synapse.dendrite.hotkey in lib.BLACKLISTED_VALIDATORS:
+            bt.logging.trace(
+                f"Blacklisting Key recognized as blacklisted hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Blacklisted hotkey"
+        elif synapse.dendrite.hotkey in lib.WHITELISTED_VALIDATORS:
+            bt.logging.trace(
+                f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return False, "Hotkey recognized!"
+        else:
+            bt.logging.trace(
+                f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+            )
+            return True, "Hotkey recognized as Blacklisted!"
+
+    # The priority function determines the order in which requests are handled.
+    # More valuable or higher-priority requests are processed before others.
+    def music_priority_fn(synapse: lib.protocol.MusicGeneration) -> float:
+        caller_uid = metagraph.hotkeys.index(
+            synapse.dendrite.hotkey
+        )  # Get the caller index.
+        prirority = float(metagraph.S[caller_uid])  # Return the stake as the priority.
+        bt.logging.trace(
+            f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
+        )
+        return prirority
+
+    def convert_music_to_tensor(audio_file):
+        '''Convert the audio file to a tensor'''
+        try:
+            # Get the file extension
+            _, file_extension = os.path.splitext(audio_file)
+
+            if file_extension.lower() in ['.wav', '.mp3']:
+                # load the audio file
+                audio, sample_rate = torchaudio.load(audio_file)
+                # convert the audio file to a tensor/list
+                audio = audio[0].tolist()
+                return audio
+            else:
+                bt.logging.error(f"Unsupported file format: {file_extension}")
+                return None
+        except Exception as e:
+            bt.logging.error(f"An error occurred while converting the file: {e}")
+
+    def ProcessMusic(synapse: lib.protocol.MusicGeneration) -> lib.protocol.MusicGeneration:
+        bt.logging.info(f"Generating music with the model: {config.music_model}")
+        music = ttm_models.generate_music(synapse.text_input)
+
+        # Check if 'music' contains valid audio data
+        if music is None:
+            bt.logging.error("No music generated!")
+            return None
+        else:
+            try:
+                sampling_rate = 32000
+                # Assuming write_wav function exists and works as intended
+                write_wav("musicgen_out.wav", rate=sampling_rate, data=music) # synapse.dendrite.hotkey + "_musicgen_out.wav"
+                bt.logging.success(f"Text to Music has been generated! and saved to: musicgen_out.wav")
+                # Assuming convert_music_to_tensor function exists to convert WAV to tensor
+                music_tensor = convert_music_to_tensor("musicgen_out.wav")
+                synapse.music_output = music_tensor
+                return synapse
+            except Exception as e:
+                bt.logging.error(f"An error occurred while processing music output: {e}")
+                return None
+
+
 ####################################################### Attach Axon  ##############################################################
     # The axon handles request processing, allowing validators to send this process requests.
     axon = bt.axon(wallet=wallet, config=config)
@@ -522,7 +653,10 @@ def main(config):
         priority_fn= vc_priority_fn).attach(
         forward_fn= ProcessSpeech,
         blacklist_fn= speech_blacklist_fn,
-        priority_fn= speech_priority_fn,
+        priority_fn= speech_priority_fn,).attach(
+        forward_fn= ProcessMusic,
+        blacklist_fn= music_blacklist_fn,
+        priority_fn= music_priority_fn,
     )
 
     # Serve passes the axon information to the network + netuid we are hosting on.
@@ -542,6 +676,12 @@ def main(config):
     step = 0
     while True:
         try:
+            current_time = time.time()
+            elapsed_time = current_time - start_time
+            if elapsed_time >= 14400:  # 4 hours = 14400 seconds
+                wandb.finish()  # Finish the current run
+                start_wandb_run()  # Start a new run
+                start_time = time.time()  # Reset the start time
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
             if step % 500 == 0:
@@ -560,7 +700,7 @@ def main(config):
             step += 1
             time.sleep(1)
 
-            if step % 1000 == 0:
+            if step % 1000 == 0 and config.auto_update == 'yes':
                 lib.utils.try_update()
 
         # If someone intentionally stops the miner, it'll safely terminate operations.

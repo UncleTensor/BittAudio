@@ -12,6 +12,7 @@ Follow these steps to install the necessary components:
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubnet
 git checkout main
+pip install -e fseq/
 pip install -r requirements.txt
 python -m pip install -e . 
 wandb login
@@ -40,6 +41,7 @@ python neurons/validator.py \
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
+| **Auto update repository**    | `--auto_update`                        | 'yes'                          | Auto update option for github repository updates.                                                                                    |
 
 ### License
 Refer to the main README for the MIT License details.

@@ -3,12 +3,12 @@
 *.pth
 *.wav
 *.mp3
-*.csv
-*.txt
+# *.csv
 *.npz
 wandb/
 !models/sample3.wav
 !requirements.txt
+# !fairseq/fairseq/version.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

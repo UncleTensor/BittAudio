@@ -4,7 +4,6 @@ import random
 import sys
 import lib
 import time
-import wandb
 import torch
 import soundfile as sf
 import asyncio
@@ -36,8 +35,6 @@ class VoiceCloningService(AIModelService):
         self.load_vc_voices()
         self.total_dendrites_per_query = self.vcdnp  # Example value, adjust as needed
         self.minimum_dendrites_per_query = 5  # Example value, adjust as needed
-        self.last_run_date = dt.date.today()
-        self.tao = self.metagraph.neurons[self.uid].stake.tao
 
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.source_path = os.path.join(audio_subnet_path, "vc_source")
@@ -74,42 +71,10 @@ class VoiceCloningService(AIModelService):
             self.audio_files = [item['audio'] for item in dataset['train']]
             return self.audio_files
 
-    def check_and_update_wandb_run(self):
-        current_date = dt.date.today()
-        if current_date > self.last_run_date:
-            self.last_run_date = current_date
-            if self.wandb_run:
-                wandb.finish()  # End the current run
-            self.new_wandb_run()  # Start a new run
-
-    def new_wandb_run(self):
-        now = dt.datetime.now()
-        run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
-        name = f"Validator-{self.uid}-{run_id}"
-        commit = self.get_git_commit_hash()
-        self.wandb_run = wandb.init(
-            name=name,
-            project="AudioSubnet_Valid",
-            entity="subnet16team",
-            config={
-                "uid": self.uid,
-                "hotkey": self.wallet.hotkey.ss58_address,
-                "run_name": run_id,
-                "type": "Validator",
-                "tao (stake)": self.tao,
-                "commit": commit,
-            },
-            tags=self.sys_info,
-            allow_val_change=True,
-            anonymous="allow",
-        )
-        bt.logging.debug(f"Started a new wandb run: {name}")
-
     async def run_async(self):
         step = 0
         running_tasks = []
         while True:
-            self.check_and_update_wandb_run()
             try:
                 new_tasks = await self.main_loop_logic(step)
                 running_tasks.extend(new_tasks)
@@ -126,7 +91,7 @@ class VoiceCloningService(AIModelService):
                 traceback.print_exc()
 
     async def process_huggingface_prompts(self, step):
-        if step % 130 == 0:
+        if step % 100 == 0:
             bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
             self.filename = ""
             self.text_input = random.choice(self.prompts)
@@ -260,6 +225,7 @@ class VoiceCloningService(AIModelService):
     def process_voice_clone_responses(self, ax):
         try:
             if self.response is not None and isinstance(self.response, lib.protocol.VoiceClone) and self.response.clone_output is not None and self.response.dendrite.status_code == 200:
+                bt.logging.success(f"Received Voice Clone output from {ax.hotkey}")
                 self.handle_clone_output(ax, self.response)
             elif self.response.dendrite.status_code != 403:
                 self.punish(ax, service="Voice Cloning", punish_message=self.response.dendrite.status_message)

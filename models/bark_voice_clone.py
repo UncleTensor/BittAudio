@@ -1582,12 +1582,14 @@ def codec_decode(fine_tokens):
 
 
 class ModelLoader:
-   def __init__(self):
-       self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-       self.model = self.load_codec_model()
-       self.hubert_manager = self.load_hubert_manager()
-       self.hubert_model = self.load_hubert_model()
-       self.tokenizer = self.load_tokenizer()
+   def __init__(self, model_dir=None):
+        self.model_dir = model_dir
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = self.load_codec_model()
+        self.hubert_manager = self.load_hubert_manager()
+        self.hubert_model = self.load_hubert_model()
+        self.tokenizer = self.load_tokenizer()
+
 
    def load_codec_model(self):
        return load_codec_model(use_gpu=True if self.device == 'cuda' else False)
@@ -1599,10 +1601,19 @@ class ModelLoader:
        return hubert_manager
 
    def load_hubert_model(self):
-       return CustomHubert(checkpoint_path='data/models/hubert/hubert.pt').to(self.device)
+        if self.model_dir:
+            model_path = os.path.join(self.model_dir, 'hubert.pt')  # Adjust the filename as needed
+        else:
+            model_path = HuBERTManager.make_sure_hubert_installed()  # This assumes the method downloads or locates the model
+        return CustomHubert(checkpoint_path=model_path).to(self.device)
+
 
    def load_tokenizer(self):
-       return CustomTokenizer.load_from_checkpoint('data/models/hubert/tokenizer.pth').to(self.device)
+       if self.model_dir:
+           model_path = os.path.join(self.model_dir, 'quantifier_hubert_base_ls960_14.pth')
+       else:
+            model_path = HuBERTManager.make_sure_tokenizer_installed()
+       return CustomTokenizer.load_from_checkpoint(model_path).to(self.device)
    
 
 class AudioProcessor:

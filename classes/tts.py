@@ -29,7 +29,7 @@ class TextToSpeechService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 25  # 25
+        self.total_dendrites_per_query = 5
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
         self.filtered_axon = []
@@ -37,7 +37,7 @@ class TextToSpeechService(AIModelService):
         self.last_reset_weights_block = self.current_block
         self.islocaltts = False
         self.p_index = 0
-        self.last_run_date = dt.date.today()
+        self.last_run_start_time = dt.datetime.now()
         self.tao = self.metagraph.neurons[self.uid].stake.tao
         
         ###################################### DIRECTORY STRUCTURE ###########################################
@@ -66,9 +66,12 @@ class TextToSpeechService(AIModelService):
             os.remove(os.path.join(self.tts_source_dir, 'tts_prompts.csv'))
         
     def check_and_update_wandb_run(self):
-        current_date = dt.date.today()
-        if current_date > self.last_run_date:
-            self.last_run_date = current_date
+        # Calculate the time difference between now and the last run start time
+        current_time = dt.datetime.now()
+        time_diff = current_time - self.last_run_start_time
+        # Check if 4 hours have passed since the last run start time
+        if time_diff.total_seconds() >= 4 * 3600:  # 4 hours * 3600 seconds/hour
+            self.last_run_start_time = current_time  # Update the last run start time to now
             if self.wandb_run:
                 wandb.finish()  # End the current run
             self.new_wandb_run()  # Start a new run
@@ -80,8 +83,8 @@ class TextToSpeechService(AIModelService):
         commit = self.get_git_commit_hash()
         self.wandb_run = wandb.init(
             name=name,
-            project="AudioSubnet_Valid",
-            entity="subnet16team",
+            project="subnet16",
+            entity="testingforsubnet16",
             config={
                 "uid": self.uid,
                 "hotkey": self.wallet.hotkey.ss58_address,
@@ -105,7 +108,7 @@ class TextToSpeechService(AIModelService):
                 await self.main_loop_logic(step)
                 step += 1
                 await asyncio.sleep(0.5)  # Adjust the sleep time as needed
-                if step % 50 == 0:
+                if step % 50 == 0 and self.config.auto_update == 'yes':
                     lib.utils.try_update()
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting TextToSpeechService.")
@@ -209,6 +212,7 @@ class TextToSpeechService(AIModelService):
         try:
             speech_output = response.speech_output
             if response is not None and isinstance(response, lib.protocol.TextToSpeech) and response.speech_output is not None and response.dendrite.status_code == 200:
+                bt.logging.success(f"Received Text to speech output from {axon.hotkey}")
                 self.handle_speech_output(axon, speech_output, prompt, response.model_name)
             elif response.dendrite.status_code != 403:
                 self.punish(axon, service="Text-To-Speech", punish_message=response.dendrite.status_message)

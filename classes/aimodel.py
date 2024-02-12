@@ -19,6 +19,7 @@ import platform
 import psutil
 import GPUtil
 import subprocess
+from huggingface_hub import hf_hub_download
 
 class AIModelService:
     _scores = None
@@ -34,10 +35,12 @@ class AIModelService:
         self.setup_metagraph()
         self.vcdnp = self.config.vcdnp
         self.max_mse = self.config.max_mse
+        self.pt_file = hf_hub_download(repo_id="lukewys/laion_clap", filename="630k-best.pt")
         if AIModelService._scores is None:
             AIModelService._scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.scores = AIModelService._scores
         self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+
 
     def get_config(self):
         parser = argparse.ArgumentParser()
@@ -46,8 +49,9 @@ class AIModelService:
         parser.add_argument("--alpha", default=0.9, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
         parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
-        parser.add_argument("--vcdnp", type=int, default=10, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=int, default=5, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
+        parser.add_argument("--auto_update", type=str, default='yes', help="Auto update option for github repository updates.")
 
         # Add Bittensor specific arguments
         bt.subtensor.add_args(parser)
