@@ -38,6 +38,7 @@ python neurons/miner.py \
     --wallet.hotkey {hotkey_name} \
     --logging.debug \
     --clone_model elevenlabs/eleven \
+    --music_model facebook/musicgen-medium \
     --model elevenlabs/eleven \
     --axon.port {machine_port}
 ```
@@ -50,6 +51,7 @@ python neurons/miner.py \
     --wallet.hotkey {hotkey_name} \
     --logging.debug \
     --clone_model bark/voiceclone \
+    --music_model facebook/musicgen-medium \
     --model {model} \
     --axon.port {machine_port}
 ```
