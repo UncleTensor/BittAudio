@@ -29,29 +29,29 @@ class CloneScore:
         return torch.mean((spec1 - spec2) ** 2)
 
 
-    def calculate_adjusted_msi(self, mse_score, MaxMSE):
+    def calculate_adjusted_mse(self, mse_score, MaxMSE):
         """
-        Calculate adjusted MSI based on mse_score and MaxMSE.
+        Calculate adjusted MSE based on mse_score and MaxMSE.
 
         Parameters:
         mse_score (float): The Mean Squared Error score.
         MaxMSE (float): The maximum acceptable Mean Squared Error.
 
         Returns:
-        float: The adjusted MSI value.
+        float: The adjusted MSE value.
         """
         try:
             if mse_score < MaxMSE:
-                # Calculate adjusted_msi when mse_score is less than MaxMSE
-                adjusted_msi = 1 - math.log(1 + mse_score) / math.log(1 + MaxMSE)
+                # Calculate adjusted_mse when mse_score is less than MaxMSE
+                adjusted_mse = 1 - math.log(1 + mse_score) / math.log(1 + MaxMSE)
             else:
-                # Set adjusted_msi to 0 when mse_score exceeds MaxMSE
-                adjusted_msi = 0
+                # Set adjusted_mse to 0 when mse_score exceeds MaxMSE
+                adjusted_mse = 0
         except Exception as e:
             print(f"An error occurred during adjusting the MSE score: {e}")
-            adjusted_msi = None
+            adjusted_mse = None
 
-        return adjusted_msi
+        return adjusted_mse
 
     def compare_audio(self, file_path1, file_path2, input_text, max_mse):
         # Extract Mel Spectrograms
@@ -78,8 +78,8 @@ class CloneScore:
             print(f"Error calculating NISQA score inside compare_audio function : {e}")
             nisqa_wer_score = 0
         # Adjust MSE Score
-        adjusted_mse = self.calculate_adjusted_msi(mse_score, max_mse)
-        bt.logging.info(f"Adjusted MSI Score for Voice Cloning: {adjusted_mse}")
+        adjusted_mse = self.calculate_adjusted_mse(mse_score, max_mse)
+        bt.logging.info(f"Adjusted MSE Score for Voice Cloning: {adjusted_mse}")
         if mse_score > max_mse:
             max_mse =  mse_score
             adjusted_mse = 0

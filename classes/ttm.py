@@ -37,6 +37,7 @@ class MusicGenerationService(AIModelService):
         self.islocaltts = False
         self.p_index = 0
         self.filtered_axon = []
+        self.combinations = []
         
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.ttm_source_dir = os.path.join(audio_subnet_path, "ttm_source")
@@ -71,7 +72,7 @@ class MusicGenerationService(AIModelService):
                 await self.main_loop_logic(step)
                 step += 1
                 await asyncio.sleep(0.5)  # Adjust the sleep time as needed
-                if step % 500 == 0 and self.config.auto_update == "yes":
+                if step % 500 == 0:
                     lib.utils.try_update()
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting MusicGenerationService.")
@@ -106,8 +107,8 @@ class MusicGenerationService(AIModelService):
                     bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
                     continue
                 self.p_index = p_index
-                filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
-                bt.logging.info(f"--------------------------------- Prompt are being used locally for Text-To-Music ---------------------------------")
+                filtered_axons = self.get_filtered_axons_from_combinations()
+                bt.logging.info(f"--------------------------------- Prompt are being used locally for Text-To-Music---------------------------------")
                 bt.logging.info(f"______________TTM-Prompt______________: {lprompt}")
                 responses = self.query_network(filtered_axons,lprompt)
                 self.process_responses(filtered_axons,responses, lprompt)
@@ -119,14 +120,13 @@ class MusicGenerationService(AIModelService):
                     scores = scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
             self.islocaltts = False
         else:
-            bt.logging.info("No prompts found or wrong file name was given. Using Huggingface Dataset for prompts.")
             g_prompts = self.load_prompts()
             g_prompt = random.choice(g_prompts)
             while len(g_prompt) > 256:
                 bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
                 g_prompt = random.choice(g_prompts)
-            if step % 150 == 0:
-                filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
+            if step % 40 == 0:
+                filtered_axons = self.get_filtered_axons_from_combinations()
                 bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for Text-To-Music ---------------------------------")
                 bt.logging.info(f"______________TTM-Prompt______________: {g_prompt}")
                 responses = self.query_network(filtered_axons,g_prompt)
@@ -149,26 +149,12 @@ class MusicGenerationService(AIModelService):
         )
         return responses
     
-    def update_block(self):
-        self.current_block = self.subtensor.block
-        if self.current_block - self.last_updated_block > 50:
-            bt.logging.info(f"Updating weights. Last update was at block {self.last_updated_block}")
-            bt.logging.info(f"Current block is {self.current_block}")
-            self.update_weights(self.scores)
-            self.last_updated_block = self.current_block
-        else:
-            bt.logging.info(f"Updating weights. Last update was at block:  {self.last_updated_block}")
-            bt.logging.info(f"Current block is: {self.current_block}")
-            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 50}")
-            bt.logging.info(f"Skipping weight update. Last update was at block {self.last_updated_block}")
-
     def process_responses(self,filtered_axons, responses, prompt):
         for axon, response in zip(filtered_axons, responses):
             if response is not None and isinstance(response, lib.protocol.MusicGeneration):
                 self.process_response(axon, response, prompt)
         
         bt.logging.info(f"Scores: {self.scores}")
-        self.update_block()
 
 
     def process_response(self, axon, response, prompt):
@@ -244,6 +230,24 @@ class MusicGenerationService(AIModelService):
         except Exception as e:
             bt.logging.error(f"Error scoring output: {e}")
             return 0.0  # Return a default score in case of an error
+        
+    def get_filtered_axons_from_combinations(self):
+        if not self.combinations:
+            self.get_filtered_axons()
+
+        if self.combinations:
+            current_combination = self.combinations.pop(0)
+            bt.logging.info(f"Current Combination for TTM: {current_combination}")
+            filtered_axons = [self.metagraph.axons[i] for i in current_combination]
+        else:
+            self.get_filtered_axons()
+            current_combination = self.combinations.pop(0)
+            bt.logging.info(f"Current Combination for TTM: {current_combination}")
+            filtered_axons = [self.metagraph.axons[i] for i in current_combination]
+
+        return filtered_axons
+
+
 
     def get_filtered_axons(self):
         # Get the uids of all miners in the network.
@@ -279,41 +283,13 @@ class MusicGenerationService(AIModelService):
         filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
         filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
         self.filtered_axon = filtered_uid
-        bt.logging.info(f"filtered_uids:{filtered_uids}")
-        dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
-        bt.logging.info(f"dendrites_to_query:{dendrites_to_query}")
-        return dendrites_to_query
+        subset_length = min(dendrites_per_query, len(filtered_uids))
+        # Shuffle the order of members
+        random.shuffle(filtered_uids)
+        # Generate subsets of length 7 until all items are covered
+        while filtered_uids:
+            subset = filtered_uids[:subset_length]
+            self.combinations.append(subset)
+            filtered_uids = filtered_uids[subset_length:]
+        return self.combinations
 
-    def update_weights(self, scores):
-        # Calculate new weights from scores
-        # if all scores are nan set all weights to 0
-        if torch.isnan(scores).all():
-            bt.logging.trace("All scores are nan, setting all weights to 0")
-            scores = torch.zeros_like(scores)
-        # convert scores from list to tensor
-        # scores = torch.Tensor(scores)
-        weights = scores / torch.sum(scores)
-        bt.logging.info(f"Setting weights: {weights}")
-
-        # Process weights for the subnet
-        processed_uids, processed_weights = bt.utils.weight_utils.process_weights_for_netuid(
-            uids=self.metagraph.uids,
-            weights=weights,
-            netuid=self.config.netuid,
-            subtensor=self.subtensor
-        )
-        bt.logging.info(f"Processed weights: {processed_weights}")
-        bt.logging.info(f"Processed uids: {processed_uids}")
-
-        # Set weights on the Bittensor network
-        result = self.subtensor.set_weights(
-            netuid=self.config.netuid,  # Subnet to set weights on
-            wallet=self.wallet,         # Wallet to sign set weights using hotkey
-            uids=processed_uids,        # Uids of the miners to set weights for
-            weights=processed_weights   # Weights to set for the miners
-        )
-
-        if result:
-            bt.logging.success('Successfully set weights.')
-        else:
-            bt.logging.error('Failed to set weights.')

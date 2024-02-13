@@ -17,54 +17,6 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-
-# # Base Class
-# import os
-# import sys
-# import asyncio
-
-# # Set the project root path
-# project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-# # Set the 'AudioSubnet' directory path
-# audio_subnet_path = os.path.abspath(project_root)
-
-# # Add the project root and 'AudioSubnet' directories to sys.path
-# sys.path.insert(0, project_root)
-# sys.path.insert(0, audio_subnet_path)
-
-# from classes.tts import TextToSpeechService 
-# from classes.vc import VoiceCloningService
-# from classes.ttm import MusicGenerationService
-
-
-
-
-# async def main():
-#     # AIModelService()
-
-#     ttm_service = MusicGenerationService()
-
-#     tts_service = TextToSpeechService()
-#     tts_service.new_wandb_run()
-
-#     vc_service = VoiceCloningService()
-
-#     vc_task = asyncio.create_task(vc_service.run_async())
-
-#     await asyncio.sleep(0.1)
-#     ttm_task = asyncio.create_task(ttm_service.run_async())
-
-#     await asyncio.sleep(0.1)
-#     tts_task = asyncio.create_task(tts_service.run_async())
-
-#     # Wait for both tasks to complete
-#     await asyncio.gather(vc_task, tts_task, ttm_task)
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
-
-
-
 import os
 import sys
 import asyncio

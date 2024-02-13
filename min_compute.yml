@@ -20,13 +20,13 @@ compute_spec:
 
     gpu:
       required: true  # Does the application require a GPU?
-      min_vram: 16GB  # Minimum GPU VRAM
+      min_vram: 48GB  # Minimum GPU VRAM
       cuda_cores: 1024  # Minimum number of CUDA cores (if applicable)
       min_compute_capability: 6.0  # Minimum CUDA compute capability
       recommended_gpu: "NVIDIA A100" # provide a recommended GPU to purchase/rent
 
     memory:
-      min_ram: 24GB  # Minimum RAM
+      min_ram: 32GB  # Minimum RAM
       min_swap: 4GB  # Minimum swap space
       ram_type: "DDR4" # RAM type (e.g., DDR4, DDR3, etc.)
 
@@ -48,13 +48,13 @@ compute_spec:
 
     gpu:
       required: true  # Does the application require a GPU?
-      min_vram: 16GB  # Minimum GPU VRAM
+      min_vram: 48GB  # Minimum GPU VRAM
       cuda_cores: 1024  # Minimum number of CUDA cores (if applicable)
       min_compute_capability: 6.0  # Minimum CUDA compute capability
       recommended_gpu: "NVIDIA A100" # provide a recommended GPU to purchase/rent
 
     memory:
-      min_ram: 24GB  # Minimum RAM
+      min_ram: 32GB  # Minimum RAM
       min_swap: 4GB  # Minimum swap space
       ram_type: "DDR4" # RAM type (e.g., DDR4, DDR3, etc.)
 

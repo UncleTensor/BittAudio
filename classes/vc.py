@@ -35,6 +35,7 @@ class VoiceCloningService(AIModelService):
         self.load_vc_voices()
         self.total_dendrites_per_query = self.vcdnp  # Example value, adjust as needed
         self.minimum_dendrites_per_query = 5  # Example value, adjust as needed
+        self.combinations = []
 
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.source_path = os.path.join(audio_subnet_path, "vc_source")
@@ -91,7 +92,7 @@ class VoiceCloningService(AIModelService):
                 traceback.print_exc()
 
     async def process_huggingface_prompts(self, step):
-        if step % 100 == 0:
+        if step % 45 == 0:
             bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
             self.filename = ""
             self.text_input = random.choice(self.prompts)
@@ -111,7 +112,7 @@ class VoiceCloningService(AIModelService):
             await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
 
     async def process_local_files(self, step, sound_files):
-        if step % 50 == 0 and sound_files:
+        if step % 25 == 0 and sound_files:
             bt.logging.info(f"--------------------------------- Prompt and voices are being used locally for Voice Clone at Step: {step} ---------------------------------")
             # Extract the base name (without extension) of each sound file
             sound_file_basenames = [os.path.splitext(f)[0] for f in sound_files]
@@ -208,7 +209,7 @@ class VoiceCloningService(AIModelService):
 
     async def generate_voice_clone(self, text_input, clone_input, sample_rate):
         try:
-            self.filtered_axons = [self.metagraph.axons[i] for i in self.get_filtered_axons()]
+            self.filtered_axons = self.get_filtered_axons_from_combinations()
             for ax in self.filtered_axons:
                 self.response = await self.dendrite.forward(
                     ax,
@@ -283,45 +284,63 @@ class VoiceCloningService(AIModelService):
         except Exception as e:
             bt.logging.error(f"Error scoring output: {e}")
             return 0.0  # Return a default score in case of an error
+        
+    def get_filtered_axons_from_combinations(self):
+        if not self.combinations:
+            self.get_filtered_axons()
+
+        if self.combinations:
+            current_combination = self.combinations.pop(0)
+            bt.logging.info(f"Current Combination for VC: {current_combination}")
+            filtered_axons = [self.metagraph.axons[i] for i in current_combination]
+        else:
+            self.get_filtered_axons()
+            current_combination = self.combinations.pop(0)
+            bt.logging.info(f"Current Combination for VC: {current_combination}")
+            filtered_axons = [self.metagraph.axons[i] for i in current_combination]
+
+        return filtered_axons
 
     def get_filtered_axons(self):
-        try:
-            uids = self.metagraph.uids.tolist()
-            queryable_uids = (self.metagraph.total_stake >= 0)
-            
-            # Remove the weights of miners that are not queryable.
-            queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
-            queryable_uid = queryable_uids * torch.Tensor([
-                any(self.metagraph.neurons[uid].axon_info.ip == ip for ip in lib.BLACKLISTED_IPS) or
-                any(self.metagraph.neurons[uid].axon_info.ip.startswith(prefix) for prefix in lib.BLACKLISTED_IPS_SEG)
-                for uid in uids
-            ])
-            active_miners = torch.sum(queryable_uids)
-            dendrites_per_query = self.total_dendrites_per_query
+        # Get the uids of all miners in the network.
+        uids = self.metagraph.uids.tolist()
+        queryable_uids = (self.metagraph.total_stake >= 0)
+        # Remove the weights of miners that are not queryable.
+        queryable_uids = queryable_uids * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+        queryable_uid = queryable_uids * torch.Tensor([
+            any(self.metagraph.neurons[uid].axon_info.ip == ip for ip in lib.BLACKLISTED_IPS) or
+            any(self.metagraph.neurons[uid].axon_info.ip.startswith(prefix) for prefix in lib.BLACKLISTED_IPS_SEG)
+            for uid in uids
+        ])
+        active_miners = torch.sum(queryable_uids)
+        dendrites_per_query = self.total_dendrites_per_query
 
-            # if there are no active miners, set active_miners to 1
-            if active_miners == 0:
-                active_miners = 1
-            # if there are less than dendrites_per_query * 3 active miners, set dendrites_per_query to active_miners / 3
-            if active_miners < self.total_dendrites_per_query * 3:
-                dendrites_per_query = int(active_miners / 3)
-            else:
-                dendrites_per_query = self.total_dendrites_per_query
-            
-            # less than 3 set to 3
-            if dendrites_per_query < self.minimum_dendrites_per_query:
-                    dendrites_per_query = self.minimum_dendrites_per_query
-            # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
-            zipped_uids = list(zip(uids, queryable_uids))
-            zipped_uid = list(zip(uids, queryable_uid))
-            filtered_zipped_uids = list(filter(lambda x: x[1], zipped_uids))
-            filtered_uids = [item[0] for item in filtered_zipped_uids] if filtered_zipped_uids else []
-            filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
-            filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
-            self.filtered_axon = filtered_uid
-            bt.logging.info(f"filtered_uids:{filtered_uids}")
-            dendrites_to_query = random.sample( filtered_uids, min( dendrites_per_query, len(filtered_uids) ) )
-            bt.logging.info(f"Dendrites to be queried for Voice Cloning Service :{dendrites_to_query}")
-            return dendrites_to_query
-        except Exception as e:
-            print(f"An error occurred while getting filtered axons: {e}")
+        # if there are no active miners, set active_miners to 1
+        if active_miners == 0:
+            active_miners = 1
+        # if there are less than dendrites_per_query * 3 active miners, set dendrites_per_query to active_miners / 3
+        if active_miners < self.total_dendrites_per_query * 3:
+            dendrites_per_query = int(active_miners / 3)
+        else:
+            dendrites_per_query = self.total_dendrites_per_query
+        
+        # less than 3 set to 3
+        if dendrites_per_query < self.minimum_dendrites_per_query:
+                dendrites_per_query = self.minimum_dendrites_per_query
+        # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
+        zipped_uids = list(zip(uids, queryable_uids))
+        zipped_uid = list(zip(uids, queryable_uid))
+        filtered_zipped_uids = list(filter(lambda x: x[1], zipped_uids))
+        filtered_uids = [item[0] for item in filtered_zipped_uids] if filtered_zipped_uids else []
+        filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
+        filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
+        self.filtered_axon = filtered_uid
+        subset_length = min(dendrites_per_query, len(filtered_uids))
+        # Shuffle the order of members
+        random.shuffle(filtered_uids)
+        # Generate subsets all items are covered
+        while filtered_uids:
+            subset = filtered_uids[:subset_length]
+            self.combinations.append(subset)
+            filtered_uids = filtered_uids[subset_length:]
+        return self.combinations
