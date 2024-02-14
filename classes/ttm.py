@@ -16,6 +16,8 @@ import lib
 import traceback
 import pandas as pd
 import sys
+import wave
+import contextlib
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # Set the 'AudioSubnet' directory path
@@ -38,6 +40,7 @@ class MusicGenerationService(AIModelService):
         self.p_index = 0
         self.filtered_axon = []
         self.combinations = []
+        self.duration = 755  #755 tokens = 15 seconds music
         
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.ttm_source_dir = os.path.join(audio_subnet_path, "ttm_source")
@@ -143,7 +146,7 @@ class MusicGenerationService(AIModelService):
         
         responses = self.dendrite.query(
             filtered_axons,
-            lib.protocol.MusicGeneration(roles=["user"], text_input=prompt),
+            lib.protocol.MusicGeneration(roles=["user"], text_input=prompt, duration=self.duration ),
             deserialize=True,
             timeout=120,
         )
@@ -170,6 +173,14 @@ class MusicGenerationService(AIModelService):
         except Exception as e:
             bt.logging.error(f'An error occurred while handling speech output: {e}')
 
+
+    def get_duration(self, wav_file_path):
+        with contextlib.closing(wave.open(wav_file_path,'r')) as f:
+            frames = f.getnframes()
+            rate = f.getframerate()
+            duration = frames / float(rate)
+            return duration
+
     def handle_music_output(self, axon, music_output, prompt, model_name):
         try:
             # Convert the list to a tensor
@@ -187,25 +198,25 @@ class MusicGenerationService(AIModelService):
             if self.islocaltts:
                 output_path = os.path.join(self.ttm_target_dir, f'{self.p_index}_output_{axon.hotkey}.wav')
             else:
+                # After saving the audio file
                 output_path = os.path.join('/tmp', f'output_music_{axon.hotkey}.wav')
-            
-            # Check if any WAV file with .wav extension exists and delete it
-            existing_wav_files = [f for f in os.listdir('/tmp') if f.endswith('.wav')]
-            for existing_file in existing_wav_files:
-                try:
-                    os.remove(os.path.join('/tmp', existing_file))
-                except Exception as e:
-                    bt.logging.error(f"Error deleting existing WAV file: {e}")
+                sampling_rate = 32000
+                torchaudio.save(output_path, src=audio_data_int, sample_rate=sampling_rate)
+                bt.logging.info(f"Saved audio file to {output_path}")
 
-            # Save the audio file
-            sampling_rate = 32000
-            torchaudio.save(output_path, src=audio_data_int, sample_rate=sampling_rate)
-            print(f"Saved audio file to {output_path}")
-
-            # Score the output and update the weights
-            score = self.score_output(output_path, prompt)
-            bt.logging.info(f"Aggregated Score from the NISQA and WER Metric: {score}")
-            self.update_score(axon, score, service="Text-To-Music", ax=self.filtered_axon)
+                # Calculate the duration
+                duration = self.get_duration(output_path)
+                token = duration * 50.2
+                bt.logging.info(f"The duration of the audio file is {duration} seconds.")
+            if token < self.duration:
+                bt.logging.error(f"The duration of the audio file is less than {self.duration / 50.2} seconds.Punishing the axon.")
+                self.punish(axon, service="Text-To-Music", punish_message=f"The duration of the audio file is less than {self.duration / 50.2} seconds.")
+                return
+            else:
+                # Score the output and update the weights
+                score = self.score_output(output_path, prompt)
+                bt.logging.info(f"Aggregated Score from Smoothness, SNR and Consistancy Metric: {score}")
+                self.update_score(axon, score, service="Text-To-Music", ax=self.filtered_axon)
 
         except Exception as e:
             bt.logging.error(f"Error processing speech output: {e}")

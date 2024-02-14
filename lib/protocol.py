@@ -76,6 +76,7 @@ class MusicGeneration(bt.Synapse):
     text_input: Optional[str] = None
     model_name: Optional[str] = None
     music_output: Optional[List] = None
+    duration: Optional[int] = None
 
     completion: str = None
 
