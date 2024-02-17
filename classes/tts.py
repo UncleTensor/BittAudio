@@ -29,7 +29,7 @@ class TextToSpeechService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 15
+        self.total_dendrites_per_query = 10
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
         self.filtered_axon = []
@@ -348,10 +348,10 @@ class TextToSpeechService(AIModelService):
         return self.combinations
     
     def update_weights(self, scores):
-        # Calculate new weights from scores
-        if torch.isnan(scores).all():
-            bt.logging.trace("All scores are nan, setting all weights to 0")
-            scores = torch.zeros_like(scores)
+        # # Calculate new weights from scores
+        # if torch.isnan(scores).all():
+        #     bt.logging.trace("All scores are nan, setting all weights to 0")
+        #     scores = torch.zeros_like(scores)
 
         # Process scores for blacklisted miners
         for idx, uid in enumerate(self.metagraph.uids):
