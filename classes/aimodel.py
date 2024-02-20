@@ -37,7 +37,7 @@ class AIModelService:
         self.max_mse = self.config.max_mse
         self.pt_file = hf_hub_download(repo_id="lukewys/laion_clap", filename="630k-best.pt")
         if AIModelService._scores is None:
-            AIModelService._scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+            AIModelService._scores = torch.tensor(self.metagraph.E, dtype=torch.float32)
         self.scores = AIModelService._scores
         self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
 
@@ -46,7 +46,7 @@ class AIModelService:
         parser = argparse.ArgumentParser()
 
         # Add arguments as per your original script
-        parser.add_argument("--alpha", default=0.9, type=float, help="The weight moving average scoring.")
+        parser.add_argument("--alpha", default=0.5, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
         parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
         parser.add_argument("--vcdnp", type=int, default=10, help="Number of miners to query for each forward call.")
