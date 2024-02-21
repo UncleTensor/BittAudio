@@ -154,10 +154,6 @@ class VoiceCloningService(AIModelService):
     async def main_loop_logic(self, step):
         tasks = []
         try:
-            if step % 20 == 0:
-                self.metagraph.sync(subtensor=self.subtensor)
-                bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
-
             files = os.listdir(self.source_path)
             sound_files = [f for f in files if f.endswith(".wav") or f.endswith(".mp3")]
 
@@ -215,7 +211,7 @@ class VoiceCloningService(AIModelService):
                     ax,
                     lib.protocol.VoiceClone(roles=["user"], text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
                     deserialize=True,
-                    timeout=120
+                    timeout=150
                 )
                 # Process the responses if needed
                 self.process_voice_clone_responses(ax)

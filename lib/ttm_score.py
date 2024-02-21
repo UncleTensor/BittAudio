@@ -25,8 +25,7 @@ class MetricEvaluator:
         audio_signal, _ = torchaudio.load(file_path)
         amplitude_envelope = torch.from_numpy(np.abs(hilbert(audio_signal[0].numpy())))
         smoothness = 0.0
-        for i in range(1, len(amplitude_envelope)):
-            smoothness += torch.abs((amplitude_envelope[i] - amplitude_envelope[i-1]) / (i - (i-1)))
+        smoothness = torch.sum(torch.abs(amplitude_envelope[1:] - amplitude_envelope[:-1]))
         smoothness /= len(amplitude_envelope) - 1
         return smoothness.item()
 

@@ -85,11 +85,6 @@ class MusicGenerationService(AIModelService):
                 traceback.print_exc()
 
     async def main_loop_logic(self, step):
-        # Sync and update weights logic
-        if step % 5 == 0:
-            self.metagraph.sync(subtensor=self.subtensor)
-            bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
-        
         uids = self.metagraph.uids.tolist()
         # If there are more uids than scores, add more weights.
         if len(uids) > len(self.scores):
@@ -111,7 +106,7 @@ class MusicGenerationService(AIModelService):
                     continue
                 self.p_index = p_index
                 filtered_axons = self.get_filtered_axons_from_combinations()
-                bt.logging.info(f"--------------------------------- Prompt are being used locally for Text-To-Music---------------------------------")
+                bt.logging.info(f"------------------ Prompt are being used locally for Text-To-Music--------------------")
                 bt.logging.info(f"______________TTM-Prompt______________: {lprompt}")
                 responses = self.query_network(filtered_axons,lprompt)
                 self.process_responses(filtered_axons,responses, lprompt)
@@ -120,7 +115,7 @@ class MusicGenerationService(AIModelService):
                     bt.logging.info(f"Clearing weights for validators and nodes without IPs")
                     self.last_reset_weights_block = self.current_block        
                     # set all nodes without ips set to 0
-                    scores = scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
+                    self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
             self.islocaltts = False
         else:
             g_prompts = self.load_prompts()
@@ -139,7 +134,7 @@ class MusicGenerationService(AIModelService):
                     bt.logging.info(f"Clearing weights for validators and nodes without IPs")
                     self.last_reset_weights_block = self.current_block        
                     # set all nodes without ips set to 0
-                    scores = scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
+                    self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
 
     def query_network(self,filtered_axons, prompt):
         # Network querying logic
@@ -148,7 +143,7 @@ class MusicGenerationService(AIModelService):
             filtered_axons,
             lib.protocol.MusicGeneration(roles=["user"], text_input=prompt, duration=self.duration ),
             deserialize=True,
-            timeout=120,
+            timeout=150,
         )
         return responses
     
@@ -157,7 +152,7 @@ class MusicGenerationService(AIModelService):
             if response is not None and isinstance(response, lib.protocol.MusicGeneration):
                 self.process_response(axon, response, prompt)
         
-        bt.logging.info(f"Scores: {self.scores}")
+        bt.logging.info(f"Scores after update in TTM: {self.scores}")
 
 
     def process_response(self, axon, response, prompt):
