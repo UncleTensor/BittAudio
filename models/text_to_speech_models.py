@@ -63,6 +63,8 @@ class TextToSpeechModels:
         self.processor = SpeechT5Processor.from_pretrained(model_path)
         self.model = SpeechT5ForTextToSpeech.from_pretrained(model_path)
         self.vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_path)
+        self.embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+
         
         # Initialize SpeakerRecognizer
         self.speaker_recognizer = SpeakerRecognizer()
@@ -81,9 +83,8 @@ class TextToSpeechModels:
             speaker_embeddings = self.speaker_recognizer.create_speaker_embedding(audio_file_path)
         else:
             # Use default embeddings if no audio file is provided
-            embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-            random_integer = torch.randint(0, len(embeddings_dataset), (1,)).item()
-            speaker_embeddings = torch.tensor(embeddings_dataset[random_integer]["xvector"]).unsqueeze(0).to(self.device)
+            random_integer = torch.randint(0, len(self.embeddings_dataset), (1,)).item()
+            speaker_embeddings = torch.tensor(self.embeddings_dataset[random_integer]["xvector"]).unsqueeze(0).to(self.device)
 
         # Generate speech
         generated_speech = self.model.generate(inputs["input_ids"], speaker_embeddings= speaker_embeddings, vocoder=self.vocoder)
