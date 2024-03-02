@@ -152,7 +152,7 @@ class AIModelService:
             zipped_uids = list(zip(uids, self.metagraph.axons))
             uid_index = list(zip(*filter(lambda x: x[1] == axon, zipped_uids)))[0][0]
             alpha = self.config.alpha
-            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.05)
+            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.1)
             if self.scores[uid_index] < 0:
                 self.scores[uid_index] = 0
             # Log the updated score

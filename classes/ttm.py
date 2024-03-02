@@ -31,7 +31,7 @@ class MusicGenerationService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 10
+        self.total_dendrites_per_query = 13
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
         self.last_updated_block = self.current_block - (self.current_block % 100)
@@ -143,7 +143,7 @@ class MusicGenerationService(AIModelService):
             filtered_axons,
             lib.protocol.MusicGeneration(roles=["user"], text_input=prompt, duration=self.duration ),
             deserialize=True,
-            timeout=150,
+            timeout=140,
         )
         return responses
     
