@@ -50,7 +50,7 @@ wandb login
 
 ## Recommended GPU Configuration
 
-For optimal performance, it is recommended to use NVIDIA GeForce RTX 4090 GPUs for both Validators and Miners.
+For optimal performance, it is recommended to use NVIDIA GeForce RTX A6000 GPUs for both Validators and Miners.
 
 
 **Evaluation Mechanism:**
