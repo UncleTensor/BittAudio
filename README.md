@@ -41,10 +41,8 @@ Join the Audio Subnetwork and contribute to the advancement of decentralized tex
 ```bash 
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubnet
-git checkout main
 pip install -e fseq/
-pip install -r requirements.txt
-python -m pip install -e . 
+pip install -e .
 wandb login
 ```
 

@@ -84,6 +84,7 @@ class CloneScore:
             max_mse =  mse_score
             adjusted_mse = 0
         final_score = (adjusted_mse + nisqa_wer_score)/2
+        final_score = final_score * 0.8
         bt.logging.info(f"Final Score for Voice Cloning: {final_score}")
         
         return final_score, max_mse

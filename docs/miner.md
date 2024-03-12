@@ -7,19 +7,33 @@ Miners in the Audio Subnetwork are responsible for generating audio from text pr
 ## Installation
 Follow these steps to install the necessary components:
 
+**Set Conda Enviornment**
+```bash
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm -rf ~/miniconda3/miniconda.sh
+~/miniconda3/bin/conda init bash
+~/miniconda3/bin/conda init zsh
+conda create -n {conda-env} python=3.10 -y
+conda activate {conda-env}
+```
+**Install Repo**
 ```bash
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubnet
-git checkout main
 pip install -e fseq/
-pip install -r requirements.txt
-python -m pip install -e . 
+pip install -e .
 wandb login
 ```
-
+**Install pm2**
+```bash
+sudo apt install nodejs npm
+sudo npm install pm2 -g
+```
 
 ### Recommended GPU Configuration
-- NVIDIA GeForce RTX 3090 GPUs are recommended for optimal performance.
+- NVIDIA GeForce RTX A6000 GPUs are recommended for optimal performance.
 
 ### Running a Miner
  - To operate a miner, run the miner.py script with the necessary configuration.
@@ -42,6 +56,19 @@ python neurons/miner.py \
     --model elevenlabs/eleven \
     --axon.port {machine_port}
 ```
+Start with pm2
+```bash
+pm2 start neurons/miner.py -- \
+    --netuid 16 \
+    --subtensor.network {miner-network} \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+    --model {tts-model} \
+    --music_path {ttm-model} \
+    --clone_model {vc-model} \
+    --axon.port {machine_port}
+```
 
 For running VC bark/voiceclone:
 ```bash
@@ -60,12 +87,11 @@ python neurons/miner.py \
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | 'microsoft/speecht5_tts' ; 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.|
+| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.|
 | **Text To Music Model** | `--music_model`                           | 'facebook/musicgen-medium' ; 'facebook/musicgen-large'       | The model to use for Text-To-Music |
 | **Voice Clone Model** | `--clone_model`                           | 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
 | **Music Finetuned Model** | `--music_path`                           | /path/to/model | The model to use for Text-To-Music |
 | **Voice Clone Finetuned Model** | `--bark_vc_path`                           | /path/to/model | The bark Finetuned model to use for Voice Clone |
-| **Microsoft TTS Finetuned Model**    | `--ms_model_path`                        | /path/to/model | The Finetuned Microsoft tts model to be used for text-to-speech. |
 | **Facebook TTS Finetuned Model**    | `--fb_model_path`                        | /path/to/model | The Finetuned Facebook tts model to be used for text-to-speech. |
 | **Bark TTS Finetuned Model**    | `--bark_model_path`                        |  /path/to/model | The Finetuned Bark tts model to be used for text-to-speech. |
 | **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |

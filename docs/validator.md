@@ -8,14 +8,29 @@ Validators initiate the audio generation process by providing prompts to the Min
 ## Installation
 Follow these steps to install the necessary components:
 
+**Set Conda Enviornment**
+```bash
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm -rf ~/miniconda3/miniconda.sh
+~/miniconda3/bin/conda init bash
+~/miniconda3/bin/conda init zsh
+conda create -n {conda-env} python=3.10 -y
+conda activate {conda-env}
+```
+**Install Repo**
 ```bash
 git clone https://github.com/UncleTensor/AudioSubnet.git
 cd AudioSubnet
-git checkout main
 pip install -e fseq/
-pip install -r requirements.txt
-python -m pip install -e . 
+pip install -e .
 wandb login
+```
+**Install pm2**
+```bash
+sudo apt install nodejs npm
+sudo npm install pm2 -g
 ```
 
 ## Running a Validator
@@ -28,6 +43,16 @@ python neurons/validator.py \
     --wallet.name {wallet_name} \
     --wallet.hotkey {hotkey_name} \
     --logging.debug \
+```
+```bash
+pm2 start neurons/validator.py -- \
+    --name {name} \
+    --interpreter python3 \
+    --netuid 16 \
+    --subtensor.network {validator-network} \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug
 ```
 
 ### Bittensor Validator Script Arguments:

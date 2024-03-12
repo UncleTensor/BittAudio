@@ -31,66 +31,6 @@ import torch
 import os
 
 
-# Speaker Embedding Generator using SpeechBrain's Speaker Recognition Model
-class SpeakerRecognizer:
-    def __init__(self):
-        self.spk_model_name = "speechbrain/spkrec-xvect-voxceleb"
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.speaker_model = EncoderClassifier.from_hparams(
-            source=self.spk_model_name,
-            run_opts={"device": self.device},
-            savedir=os.path.join("/tmp", self.spk_model_name),
-        )
-
-    def create_speaker_embedding(self, audio_file_path):
-        waveform, sample_rate = torchaudio.load(audio_file_path)
-
-        if sample_rate != 16000:
-            resampler = Resample(orig_freq=sample_rate, new_freq=16000)
-            waveform = resampler(waveform)
-
-        with torch.no_grad():
-            speaker_embeddings = self.speaker_model.encode_batch(waveform)
-            speaker_embeddings = torch.nn.functional.normalize(speaker_embeddings, dim=2)
-            speaker_embeddings = speaker_embeddings.squeeze().cpu().numpy()
-
-        return speaker_embeddings
-    
-# Text-to-Speech Synthesis with Customizable Speaker Embeddings
-class TextToSpeechModels:
-    def __init__(self, model_path="microsoft/speecht5_tts", vocoder_model_path="microsoft/speecht5_hifigan"):
-        # Load the models and processor with support for overriding the model path
-        self.processor = SpeechT5Processor.from_pretrained(model_path)
-        self.model = SpeechT5ForTextToSpeech.from_pretrained(model_path)
-        self.vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_path)
-        self.embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-
-        
-        # Initialize SpeakerRecognizer
-        self.speaker_recognizer = SpeakerRecognizer()
-
-        # Move models to GPU if available
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-        self.vocoder.to(self.device)
-        
-    def generate_speech(self, text_input, audio_file_path=None):
-        # Process the text input
-        inputs = self.processor(text=text_input, return_tensors="pt").to(self.device)
-
-        # Generate speaker embeddings from the provided audio file
-        if audio_file_path:
-            speaker_embeddings = self.speaker_recognizer.create_speaker_embedding(audio_file_path)
-        else:
-            # Use default embeddings if no audio file is provided
-            random_integer = torch.randint(0, len(self.embeddings_dataset), (1,)).item()
-            speaker_embeddings = torch.tensor(self.embeddings_dataset[random_integer]["xvector"]).unsqueeze(0).to(self.device)
-
-        # Generate speech
-        generated_speech = self.model.generate(inputs["input_ids"], speaker_embeddings= speaker_embeddings, vocoder=self.vocoder)
-        return generated_speech
-
-
 # Text-to-Speech Generation Using Suno Bark's Pretrained Model
 class SunoBark:
     def __init__(self, model_path="suno/bark"):

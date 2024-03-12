@@ -17,6 +17,8 @@ import lib.protocol
 from lib.protocol import VoiceClone
 from lib.clone_score import CloneScore
 from classes.aimodel import AIModelService
+import wandb
+import numpy as np
 
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -36,6 +38,7 @@ class VoiceCloningService(AIModelService):
         self.total_dendrites_per_query = self.vcdnp  # Example value, adjust as needed
         self.minimum_dendrites_per_query = 5  # Example value, adjust as needed
         self.combinations = []
+        self.lock = asyncio.Lock()
 
         ###################################### DIRECTORY STRUCTURE ###########################################
         self.source_path = os.path.join(audio_subnet_path, "vc_source")
@@ -90,26 +93,26 @@ class VoiceCloningService(AIModelService):
             except Exception as e:
                 print(f"An error occurred in VoiceCloneService: {e}")
                 traceback.print_exc()
-
     async def process_huggingface_prompts(self, step):
         if step % 45 == 0:
-            bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
-            self.filename = ""
-            self.text_input = random.choice(self.prompts)
-            while len(self.text_input) > 256:
-                bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
+            async with self.lock:
+                bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
+                self.filename = ""
                 self.text_input = random.choice(self.prompts)
+                while len(self.text_input) > 256:
+                    bt.logging.error(f"The length of current Prompt is greater than 256. Skipping current prompt.")
+                    self.text_input = random.choice(self.prompts)
 
-            vc_voice = random.choice(self.audio_files)
-            audio_array = vc_voice['array']
-            sampling_rate = vc_voice['sampling_rate']
-            self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
-            sf.write('input_file.wav', audio_array, sampling_rate)
-            self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
-            waveform, _ = torchaudio.load(self.audio_file_path)
-            clone_input = waveform.tolist()
-            sample_rate = sampling_rate
-            await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
+                vc_voice = random.choice(self.audio_files)
+                audio_array = vc_voice['array']
+                sampling_rate = vc_voice['sampling_rate']
+                self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
+                sf.write('input_file.wav', audio_array, sampling_rate)
+                self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
+                waveform, _ = torchaudio.load(self.audio_file_path)
+                clone_input = waveform.tolist()
+                sample_rate = sampling_rate
+                await self.generate_voice_clone(self.text_input, clone_input, sample_rate)
 
     async def process_local_files(self, step, sound_files):
         if step % 25 == 0 and sound_files:
@@ -209,7 +212,7 @@ class VoiceCloningService(AIModelService):
             for ax in self.filtered_axons:
                 self.response = await self.dendrite.forward(
                     ax,
-                    lib.protocol.VoiceClone(roles=["user"], text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
+                    lib.protocol.VoiceClone(text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
                     deserialize=True,
                     timeout=130
                 )
@@ -242,9 +245,9 @@ class VoiceCloningService(AIModelService):
                 # Normalize the speech data
                 audio_data = clone_tensor / torch.max(torch.abs(clone_tensor))
                 # Convert to 32-bit PCM
-                audio_data_int = (audio_data * 2147483647).type(torch.IntTensor)
+                audio_data_int_ = (audio_data * 2147483647).type(torch.IntTensor)
                 # Add an extra dimension to make it a 2D tensor
-                audio_data_int = audio_data_int.unsqueeze(0)
+                audio_data_int = audio_data_int_.unsqueeze(0)
                 if response.model_name == "elevenlabs/eleven":
                     sampling_rate = 44000
                 else:
@@ -254,6 +257,12 @@ class VoiceCloningService(AIModelService):
                 if file is None or file == "":
                     cloned_file_path = os.path.join('/tmp', self.hf_voice_id + '_cloned_'+ axon.hotkey[:6] +'_.wav' )
                 torchaudio.save(cloned_file_path, src=audio_data_int, sample_rate=sampling_rate)
+                try:
+                    uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
+                    wandb.log({f"Voice Clone Prompt: {response.text_input}": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                    bt.logging.success(f"Voice Clone Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and uid {uid_in_metagraph}")
+                except Exception as e:
+                    bt.logging.error(f"Error uploading Voice Clone Audio file to wandb: {e}")                               
                 # Score the output and update the weights
                 score = self.score_output(self.audio_file_path, cloned_file_path, self.text_input)
                 self.update_score(axon, score, service="Voice Cloning", ax=self.filtered_axon)

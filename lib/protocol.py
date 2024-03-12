@@ -16,106 +16,128 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-import numpy as np
-import torch
-from typing import Optional, List
+from typing import List, Optional
 import bittensor as bt
-import pydantic
+from pydantic import Field
 
 class TextToSpeech(bt.Synapse):
     """
-    TextToSpeech class inherits from bt.Synapse.
-    It is used to convert text to speech.
+    This class converts text into speech using predefined machine learning models. Available models include 'microsoft/speecht5_tts', 'facebook/mms-tts-eng', 'suno/bark', and 'elevenlabs/eleven'. Inherits functionalities from bt.Synapse, making it integral to a neural processing architecture.
     """
     class Config:
         """
-        Pydantic model configuration class for Prompting. This class sets validation of attribute assignment as True.
-        validate_assignment set to True means the pydantic model will validate attribute assignments on the class.
+        Configuration class for Pydantic model, enforcing strict type validation and assignment, thereby ensuring data integrity for TextToSpeech instances.
         """
-
         validate_assignment = True
 
-
-
-    # Required request input, filled by sending dendrite caller.
-    text_input: Optional[str] = None
-    model_name: Optional[str] = None
-    clone_input: Optional[List] = None
-    # Here we define speech_output as an Optional PyTorch tensor instead of bytes.
-    speech_output: Optional[List] = None
-
-    completion: str = None
-
+    text_input: str = Field(
+        default=None,
+        title="Text Input",
+        description="The input text to be converted into speech format."
+    )
+    model_name: Optional[str] = Field(
+        default=None,
+        title="Model Name",
+        description="Specifies the machine learning model used for text-to-speech conversion. Supported models: 'microsoft/speecht5_tts', 'facebook/mms-tts-eng', 'suno/bark', 'elevenlabs/eleven'."
+    )
+    clone_input: List = Field(
+        default=None,
+        title="Clone Input",
+        description="A list of parameters used for enhancing the text-to-speech process, relevant for models supporting voice cloning."
+    )
+    speech_output: List = Field(
+        default=None,
+        title="Speech Output",
+        description="The resulting speech data produced from the text input."
+    )
 
     def deserialize(self) -> List:
         """
-        Deserialize the speech_output into a PyTorch tensor.
+        Converts and returns the speech_output into a structured format, suitable for playback or further processing.
         """
-        # If speech_output is a tensor, just return it
-        # if isinstance(self.speech_output, List):
-          # print(" Deserialize the speech_output into a PyTorch tensor.",self)
         return self
-        # raise TypeError("speech_output is not a tensor")
 
 class MusicGeneration(bt.Synapse):
     """
-    MusicGeneration class inherits from bt.Synapse.
-    It is used to convert text to speech.
+    A class that transforms textual descriptions into music using machine learning models such as 'facebook/musicgen-medium' and 'facebook/musicgen-large'. Extends bt.Synapse, facilitating its integration into a broader neural-based generative system.
     """
     class Config:
         """
-        Pydantic model configuration class for Prompting. This class sets validation of attribute assignment as True.
-        validate_assignment set to True means the pydantic model will validate attribute assignments on the class.
+        Configuration class that mandates validation on attribute assignments, ensuring correctness and reliability of data for MusicGeneration instances.
         """
-
         validate_assignment = True
 
-
-
-    # Required request input, filled by sending dendrite caller.
-    text_input: Optional[str] = None
-    model_name: Optional[str] = None
-    music_output: Optional[List] = None
-    duration: Optional[int] = None
-
-    completion: str = None
-
+    text_input: str = Field(
+        default=None,
+        title="Text Input",
+        description="Textual directives or descriptions intended to guide the music generation process."
+    )
+    model_name: Optional[str] = Field(
+        default=None,
+        title="Model Name",
+        description="The machine learning model employed for music generation. Supported models: 'facebook/musicgen-medium', 'facebook/musicgen-large'."
+    )
+    music_output: List = Field(
+        default=None,
+        title="Music Output",
+        description="The resultant music data, encoded as a list, generated from the text input."
+    )
+    duration: int = Field(
+        default=None,
+        title="Duration",
+        description="The length of the generated music piece, specified in seconds."
+    )
 
     def deserialize(self) -> List:
         """
-        Deserialize the speech_output into a PyTorch tensor.
+        Processes and returns the music_output into a format ready for audio rendering or further analysis.
         """
-        # If speech_output is a tensor, just return it
-        # if isinstance(self.speech_output, List):
-          # print(" Deserialize the speech_output into a PyTorch tensor.",self)
         return self
-        # raise TypeError("speech_output is not a tensor")
 
 class VoiceClone(bt.Synapse):
     """
-    VoiceClone class inherits from bt.Synapse.
-    It is used to clone a voice.
+    The VoiceClone class is aimed at replicating specific voice attributes for text-to-speech applications using models like 'suno/bark' and 'elevenlabs/eleven'. It operates within the framework provided by bt.Synapse to harness advanced neural synthesis techniques.
     """
     class Config:
         """
-        Pydantic model configuration class for Prompting. This class sets validation of attribute assignment as True.
-        validate_assignment set to True means the pydantic model will validate attribute assignments on the class.
+        A configuration class that enables strict validation rules for property assignments, maintaining the VoiceClone class's output accuracy and consistency.
         """
-
         validate_assignment = True
 
-    text_input: Optional[str] = None
-    clone_input: Optional[List] = None
-    clone_output: Optional[List] = []
-    sample_rate: Optional[int] = None
-    completion: Optional[List] = None
-    hf_voice_id: Optional[str] = None
-    model_name: Optional[str] = None
-
+    text_input: str = Field(
+        default=None,
+        title="Text Input",
+        description="Text content to be synthesized using cloned voice attributes."
+    )
+    clone_input: List = Field(
+        default=None,
+        title="Clone Input",
+        description="Data used for analyzing and replicating the desired voice characteristics, an audio array constructed from mp3 or wav files."
+    )
+    clone_output: List = Field(
+        default=None,
+        title="Clone Output",
+        description="The synthesized voice output, incorporating cloned attributes, delivered as a list."
+    )
+    sample_rate: int = Field(
+        default=None,
+        title="Sample Rate",
+        description="The sample rate of the output audio, integral for determining audio quality and clarity."
+    )
+    hf_voice_id: str = Field(
+        default=None,
+        title="Hugging Face Voice ID",
+        description="An identifier for the voice model used from Hugging Face's repository. Supported models for cloning include 'suno/bark' and 'elevenlabs/eleven'."
+    )
+    model_name: Optional[str] = Field(
+        default=None,
+        title="Model Name",
+        description="The name of the machine learning model used for voice cloning. Compatible models: 'suno/bark', 'elevenlabs/eleven'."
+    )
 
     def deserialize(self) -> "VoiceClone":
         """
-        Return the clone_output as bytes.
-        This method would need to be further implemented based on how the bytes data is intended to be used.
+        Processes and returns the clone_output for use in auditory playback or further analysis.
         """
         return self
+
