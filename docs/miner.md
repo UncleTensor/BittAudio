@@ -60,7 +60,6 @@ Start with pm2
 ```bash
 pm2 start neurons/miner.py -- \
     --netuid 16 \
-    --subtensor.network {miner-network} \
     --wallet.name {wallet_name} \
     --wallet.hotkey {hotkey_name} \
     --logging.debug \
