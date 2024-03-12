@@ -49,7 +49,6 @@ pm2 start neurons/validator.py -- \
     --name {name} \
     --interpreter python3 \
     --netuid 16 \
-    --subtensor.network {validator-network} \
     --wallet.name {wallet_name} \
     --wallet.hotkey {hotkey_name} \
     --logging.debug
