@@ -137,7 +137,7 @@ class MusicGenerationService(AIModelService):
             duration = frames / float(rate)
             return duration
         
-    def score_adjustment(score, duration):
+    def score_adjustment(self, score, duration):
         conditions = [
             (lambda d: 14.5 <= d < 15, 0.9),
             (lambda d: 14 <= d < 14.5, 0.8),
@@ -192,9 +192,9 @@ class MusicGenerationService(AIModelService):
                     score = self.score_adjustment(score, duration)
                     bt.logging.info(f"Score updated based on short duration than the required by the client: {score}")
                 else:
-                    bt.logging.info(f"Duration is greater than 15 seconds. No need to update the score.")
+                    bt.logging.info(f"Duration is greater than 15 seconds. No need to penalize the score.")
             except Exception as e:
-                bt.logging.error(f"Error updating the one liner code done for changing score based on duration score: {e}")
+                bt.logging.error(f"Error in penalizing the score: {e}")
             bt.logging.info(f"Aggregated Score from Smoothness, SNR and Consistancy Metric: {score}")
             self.update_score(axon, score, service="Text-To-Music", ax=self.filtered_axon)
 
