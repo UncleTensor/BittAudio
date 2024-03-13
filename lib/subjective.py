@@ -39,5 +39,6 @@ class SpeechToTextEvaluator:
 
     def evaluate_wer(self, audio_file, reference_text):
         transcription = self.transcribe_audio(audio_file)
+        transcription = transcription.lower()
         wer_score = wer(reference_text, transcription)
         return wer_score

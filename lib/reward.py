@@ -3471,12 +3471,12 @@ def calculate_audio_quality_scores(data):
 
         # Define the weights for each metric
         weights = {
-            'mos_pred': 0.26,  
-            'noi_pred': 0.40,
+            'mos_pred': 0.10,
+            'noi_pred': 0.10,
             'dis_pred': 0.06,
             'col_pred': 0.06,
             'loud_pred': 0.06,
-            'word_error_rate': 0.16  
+            'word_error_rate': 0.62
         }
 
         # Normalize and invert scores as necessary
@@ -3485,7 +3485,7 @@ def calculate_audio_quality_scores(data):
         data['noi_pred'] = (data['noi_pred'] - 1) / 4  # 1 worst, 5 best
         data['dis_pred'] = (data['dis_pred'] - 1) / 4  # 1 worst, 5 best
         data['col_pred'] = (data['col_pred'] - 1) / 4  # 1 worst, 5 best
-        data['word_error_rate'] = 1 - (data['word_error_rate']) / 100  # 0 best, 100 worst
+        data['word_error_rate'] = 1 - (data['word_error_rate'])  # 0 best, 1 worst
 
         # Calculate composite score
         data['composite_score'] = 0
@@ -3497,7 +3497,6 @@ def calculate_audio_quality_scores(data):
 
         # Round the composite score to 3 decimal places
         data['composite_score'] = data['composite_score'].round(3)
-        data['composite_score'] *= 0.7
         return data['composite_score'][0]
 
     except Exception as e:
