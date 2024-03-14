@@ -3462,7 +3462,7 @@ class nisqaModel(object):
         elif (self.args['tr_checkpoint']!='every_epoch') and (self.args['tr_checkpoint']!='best_only'):
             raise ValueError('selected tr_checkpoint option not available')
 
-def calculate_audio_quality_scores(data):
+def calculate_audio_quality_scores(data, wer):
     try:
         # Convert columns to numeric type
         cols_to_convert = ['mos_pred', 'noi_pred', 'dis_pred', 'col_pred', 'loud_pred', 'word_error_rate']
@@ -3497,6 +3497,9 @@ def calculate_audio_quality_scores(data):
 
         # Round the composite score to 3 decimal places
         data['composite_score'] = data['composite_score'].round(3)
+        if wer >= 0.7:
+            bt.logging.info(f"........Word Error rate is greater than 0.7, Zero Score will be rewarded.......: {wer}")
+            data['composite_score'] = 0
         return data['composite_score'][0]
 
     except Exception as e:
@@ -3558,6 +3561,5 @@ def score(file, text) -> float:
     # Include WER in the 'NISQA_results.csv' file
     data['word_error_rate'] = word_error_rate
     data.to_csv('NISQA_results.csv', index=False)
-
     # Return the result from calculate_audio_quality_scores
-    return calculate_audio_quality_scores(data)
+    return calculate_audio_quality_scores(data, word_error_rate)
