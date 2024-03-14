@@ -3516,16 +3516,9 @@ def score(file, text) -> float:
     Returns:
     - float: The reward value for the miner.
     """
-    # pick the filename and file path from the file arguement 
-    # filename = file.split('/')[-1] 
-    # filepath = os.path.abspath(file)
-    # filepath = os.path.dirname(file)
-    # bt.logging.info(f"_____________________________ File name _____________________________: {filename}")
-    # bt.logging.info(f"_____________________________ File Path _____________________________: {filepath}")
     mode = 'predict_file'  # or 'predict_dir', 'predict_csv'
     pretrained_model = 'nisqa.tar'  # e.g., 'model.pth'
     deg = file  # e.g., 'test.wav'
-    # data_dir = filepath  # e.g., 'data/'
     output_dir = './'  # e.g., 'results/'
     csv_file = 'results.csv'  # e.g., 'data.csv'
     csv_deg = 'column_in_csv_with_files_name'  # e.g., 'filename'

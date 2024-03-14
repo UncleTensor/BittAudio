@@ -30,7 +30,7 @@ class TextToSpeechService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 15
+        self.total_dendrites_per_query = 20
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
         self.filtered_axon = []
