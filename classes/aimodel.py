@@ -46,10 +46,10 @@ class AIModelService:
         parser = argparse.ArgumentParser()
 
         # Add arguments as per your original script
-        parser.add_argument("--alpha", default=0.5, type=float, help="The weight moving average scoring.")
+        parser.add_argument("--alpha", default=0.75, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
         parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
-        parser.add_argument("--vcdnp", type=int, default=20, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=int, default=15, help="Number of miners to query for each forward call.")
         parser.add_argument("--max_mse", type=float, default=1000.0, help="Maximum Mean Squared Error for Voice cloning.")
         parser.add_argument("--auto_update", type=str, default='yes', help="Auto update option for github repository updates.")
 
