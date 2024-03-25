@@ -41,7 +41,6 @@ class TextToSpeechService(AIModelService):
         self.tao = self.metagraph.neurons[self.uid].stake.tao
         self.combinations = []
         self.lock = asyncio.Lock()
-        self.response = None
         
     def load_prompts(self):
         gs_dev = load_dataset("etechgrid/Prompts_for_Voice_cloning_and_TTS")
@@ -102,37 +101,49 @@ class TextToSpeechService(AIModelService):
                 traceback.print_exc()
 
     async def main_loop_logic(self, step):
+        g_prompt = None
+        try:
+            c_prompt = self.api.get_TTS()
+        except Exception as e:
+            bt.logging.error(f"An error occurred while fetching prompt: {e}")
+            c_prompt = None
         # Sync and update weights logic
         if step % 10 == 0:
             self.metagraph.sync(subtensor=self.subtensor)
             bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
         
-        uids = self.metagraph.uids.tolist()
-        # If there are more uids than scores, add more weights.
-        if len(uids) > len(self.scores):
-            bt.logging.trace("Adding more weights")
-            size_difference = len(uids) - len(self.scores)
-            new_scores = torch.zeros(size_difference, dtype=torch.float32)
-            self.scores = torch.cat((self.scores, new_scores))
-            del new_scores
-        g_prompts = self.load_prompts()
-        g_prompt = random.choice(g_prompts)
-        while len(g_prompt) > 256:
-            bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
-            g_prompt = random.choice(g_prompts)
-        if step % 20 == 0:
+        if step % 5 == 0:
             async with self.lock:
+                # Use the API prompt if available; otherwise, load prompts from HuggingFace
+                if c_prompt:
+                    bt.logging.info(f"--------------------------------- Prompt are being used from Corcel API for Text-To-Speech at Step: {step} --------------------------------- ")
+                    g_prompt = self.convert_numeric_values(c_prompt)  # Use the prompt from the API
+                    bt.logging.info(f"______________TTS-Prompt coming from Corcel______________: {g_prompt}")
+                    if len(g_prompt) > 256:
+                        pass
+                else:
+                    # Fetch prompts from HuggingFace if API failed
+                    bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for Text-To-Speech at Step: {step} --------------------------------- ")
+                    g_prompt = self.load_prompts()
+                    g_prompt = random.choice(g_prompt)  # Choose a random prompt from HuggingFace
+                    g_prompt = self.convert_numeric_values(g_prompt)
+
+                while len(g_prompt) > 256:
+                    bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
+                    g_prompt = random.choice(g_prompt)
+                    g_prompt = self.convert_numeric_values(g_prompt)
+
                 filtered_axons = self.get_filtered_axons_from_combinations()
-                bt.logging.info(f"Prompt are being used from HuggingFace Dataset for TTS at Step: {step}")
-                bt.logging.info(f"______________Prompt______________: {g_prompt}")
+                bt.logging.info(f"______________TTS-Prompt______________: {g_prompt}")
                 responses = self.query_network(filtered_axons, g_prompt)
                 self.process_responses(filtered_axons, responses, g_prompt)
 
-                if self.last_reset_weights_block + 1800 < self.current_block:
+                if self.last_reset_weights_block + 50 < self.current_block:
                     bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
                     self.last_reset_weights_block = self.current_block        
                     # set all nodes without ips set to 0
                     self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
+
     def query_network(self,filtered_axons, prompt):
         # Network querying logic
         
@@ -146,7 +157,7 @@ class TextToSpeechService(AIModelService):
     
     def update_block(self):
         self.current_block = self.subtensor.block
-        if self.current_block - self.last_updated_block > 100:
+        if self.current_block - self.last_updated_block > 150:
             bt.logging.info(f"Updating weights. Last update was at block {self.last_updated_block}")
             bt.logging.info(f"Current block is {self.current_block}")
             self.update_weights(self.scores)
@@ -154,13 +165,12 @@ class TextToSpeechService(AIModelService):
         else:
             bt.logging.info(f"Updating weights. Last update was at block:  {self.last_updated_block}")
             bt.logging.info(f"Current block is: {self.current_block}")
-            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 100}")
+            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 150}")
             bt.logging.info(f"Skipping weight update. Last update was at block {self.last_updated_block}")
 
     def process_responses(self,filtered_axons, responses, prompt):
         for axon, response in zip(filtered_axons, responses):
             if response is not None and isinstance(response, lib.protocol.TextToSpeech):
-                self.response = response
                 self.process_response(axon, response, prompt)
         
         bt.logging.info(f"Scores after update in TTS: {self.scores}")
@@ -215,7 +225,7 @@ class TextToSpeechService(AIModelService):
             print(f"Saved audio file to {output_path}")
             try:
                 uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                wandb.log({f"Text to Speech prompt:{self.response.text_input} ": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                wandb.log({f"Text to Speech prompt:{prompt} ": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
                 bt.logging.success(f"TTS Audio file uploaded to wandb successfully for Hotkey {axon.hotkey}")
             except Exception as e:
                 bt.logging.error(f"Error uploading TTS audio to wandb for Hotkey {axon.hotkey}: {e}")
@@ -223,6 +233,7 @@ class TextToSpeechService(AIModelService):
             score = self.score_output(output_path, prompt)
             bt.logging.info(f"Aggregated Score from the NISQA and WER Metric: {score}")
             self.update_score(axon, score, service="Text-To-Speech", ax=self.filtered_axon)
+            # return output_path
 
         except Exception as e:
             bt.logging.error(f"Error processing speech output: {e}")
@@ -339,7 +350,8 @@ class TextToSpeechService(AIModelService):
                 wallet=self.wallet,         # Wallet to sign set weights using hotkey
                 uids=processed_uids,        # Uids of the miners to set weights for
                 weights=processed_weights, # Weights to set for the miners
-                wait_for_finalization=True,   
+                wait_for_finalization=True,
+                version_key=self.version,
             )
 
             if result:
@@ -349,4 +361,3 @@ class TextToSpeechService(AIModelService):
                 bt.logging.error('Failed to set weights.')
         except Exception as e:
             bt.logging.error(f"An error occurred while setting weights: {e}")
-

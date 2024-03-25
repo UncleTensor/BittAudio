@@ -3,10 +3,15 @@
 Welcome to the Validator's guide for the Audio Generation Subnetwork within the Bittensor network. This document provides instructions for setting up and running a Validator node in the network.
 
 ## Overview
-Validators initiate the audio generation process by providing prompts to the Miners and evaluate the quality of the generated audio. They play a crucial role in maintaining the quality standards of the network.
+Validators initiate the audio generation process by providing prompts to the Miners and evaluate the quality of the generated audio. They play a crucial role in maintaining the quality standards of the network. The prompts will be generated with the help of the Corcel API, Product by Subnet 18, which provides a infinite range of prompts for Text-To-Speech, Voice Clone and Text-To-Music.
 
 ## Installation
 Follow these steps to install the necessary components:
+
+**Export Corcel API key**
+```bash
+echo "export CORCEL_API_KEY=XXXXXXXXXXXXXXX">>~/.bashrc && source ~/.bashrc
+```
 
 **Set Conda Enviornment**
 ```bash

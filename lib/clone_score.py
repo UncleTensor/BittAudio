@@ -4,17 +4,33 @@ import torchaudio.transforms as T
 import bittensor as bt
 from lib.reward import score
 import math
-
+import numpy as np
+from scipy.spatial.distance import cosine
+from torchaudio.transforms import Vad
 
 class CloneScore:
     def __init__(self, n_mels=128):
         self.n_mels = n_mels
+        self.vad = Vad(sample_rate=16000)  # Voice Activity Detection for trimming silence
+
+    def trim_silence(self, waveform,):
+        # Assuming the audio is mono for simplicity; adjust or expand as needed for your use case
+        if waveform.shape[0] > 1:
+            waveform = torch.mean(waveform, dim=0, keepdim=True)
+        trimmed_waveform = self.vad(waveform)
+        return trimmed_waveform
 
     def extract_mel_spectrogram(self, file_path):
         waveform, sample_rate = torchaudio.load(file_path)
+        # Trim silence from the waveform
+        waveform = self.trim_silence(waveform)
         mel_spectrogram_transform = T.MelSpectrogram(sample_rate=sample_rate, n_mels=self.n_mels)
         mel_spectrogram = mel_spectrogram_transform(waveform)
-        return mel_spectrogram
+        # Convert power spectrogram to dB units and normalize
+        db_transform = T.AmplitudeToDB()
+        mel_spectrogram_db = db_transform(mel_spectrogram)
+        norm_spectrogram = (mel_spectrogram_db - mel_spectrogram_db.mean()) / mel_spectrogram_db.std()
+        return norm_spectrogram
 
     def pad_or_trim_to_same_length(self, spec1, spec2):
         if spec1.size(2) > spec2.size(2):
@@ -25,68 +41,52 @@ class CloneScore:
             spec1 = torch.nn.functional.pad(spec1, (0, padding_size))
         return spec1, spec2
 
-    def calculate_mse(self, spec1, spec2):
-        return torch.mean((spec1 - spec2) ** 2)
+    def calculate_cosine_similarity(self, spec1, spec2):
+        # Flatten the spectrograms and convert them to NumPy arrays for the cosine similarity calculation
+        spec1_flat = spec1.numpy().flatten()
+        spec2_flat = spec2.numpy().flatten()
+        # Calculate the cosine similarity and ensure it is within the range [0, 1]
+        sim = 1 - cosine(spec1_flat, spec2_flat)
+        # Inform the user if the initial similarity value is negative
+        if sim < 0:
+            bt.logging.error(f"Initial cosine similarity was negative: {sim}. Setting to 0.")
+            sim = 0  # Zero out negative value
+        return sim
 
-
-    def calculate_adjusted_mse(self, mse_score, MaxMSE):
-        """
-        Calculate adjusted MSE based on mse_score and MaxMSE.
-
-        Parameters:
-        mse_score (float): The Mean Squared Error score.
-        MaxMSE (float): The maximum acceptable Mean Squared Error.
-
-        Returns:
-        float: The adjusted MSE value.
-        """
-        try:
-            if mse_score < MaxMSE:
-                # Calculate adjusted_mse when mse_score is less than MaxMSE
-                adjusted_mse = 1 - math.log(1 + mse_score) / math.log(1 + MaxMSE)
-            else:
-                # Set adjusted_mse to 0 when mse_score exceeds MaxMSE
-                adjusted_mse = 0
-        except Exception as e:
-            print(f"An error occurred during adjusting the MSE score: {e}")
-            adjusted_mse = None
-
-        return adjusted_mse
-
-    def compare_audio(self, file_path1, file_path2, input_text, max_mse):
+    def compare_audio(self, file_path1, file_path2, input_text):
         # Extract Mel Spectrograms
         try:
-            print("Extracting Mel spectrograms...")
-            print("File 1:", file_path1)
-            print("File 2:", file_path2)
-            print("Input Text:", input_text)
+            bt.logging.info(f"Extracting Mel spectrograms...")
+            bt.logging.info(f"File 1: {file_path1}")
+            bt.logging.info(f"File 2: {file_path2}")
+            bt.logging.info(f"Input Text:{input_text}")
             spec1 = self.extract_mel_spectrogram(file_path1)
             spec2 = self.extract_mel_spectrogram(file_path2)
         except Exception as e:
-            print(f"Error extracting Mel spectrograms: {e}")
+            bt.logging.error(f"Error extracting Mel spectrograms: {e}")
             spec1 = spec2 = None
 
-        # Pad or Trim
-        spec1, spec2 = self.pad_or_trim_to_same_length(spec1, spec2)
+        if spec1 is not None and spec2 is not None:
+            # Pad or Trim
+            spec1, spec2 = self.pad_or_trim_to_same_length(spec1, spec2)
+            # Calculate Cosine Similarity
+            cosine_sim = self.calculate_cosine_similarity(spec1, spec2)
+            bt.logging.info(f"Cosine Similarity for Voice Cloning: {cosine_sim}")
+        else:
+            cosine_sim = 0  # Assigning a default low value if spectrograms extraction failed
 
-        # Calculate MSE
-        mse_score = self.calculate_mse(spec1, spec2).item()
-        bt.logging.info(f"MSE Score for Voice Cloning: {mse_score}")
         try:
             nisqa_wer_score = score(file_path2, input_text)
         except Exception as e:
-            print(f"Error calculating NISQA score inside compare_audio function : {e}")
+            bt.logging.error(f"Error calculating NISQA score inside compare_audio function: {e}")
             nisqa_wer_score = 0
-        # Adjust MSE Score
-        adjusted_mse = self.calculate_adjusted_mse(mse_score, max_mse)
-        bt.logging.info(f"Adjusted MSE Score for Voice Cloning: {adjusted_mse}")
-        if mse_score > max_mse:
-            max_mse =  mse_score
-            adjusted_mse = 0
-        final_score = (adjusted_mse + nisqa_wer_score)/2
-        if nisqa_wer_score == 0:
-            final_score = 0
-        bt.logging.info(f"Final Score for Voice Cloning: {final_score}")
-        
-        return final_score, max_mse
 
+        # Calculate Final Score with 40% weight for Cosine Similarity and 60% weight for NISQA score
+        final_score = 0.4 * cosine_sim + 0.6 * nisqa_wer_score
+        if cosine_sim == 0:
+            final_score = -0.1  # Assigning a negative score for zero or negative cosine similarity
+        # bt.logging.info(f"Final Score for Voice Cloning: {final_score}")
+        bt.logging.info(f"Final Score: {final_score} and Cosine Similarity: {cosine_sim} for Voice Cloning: ")
+
+
+        return final_score

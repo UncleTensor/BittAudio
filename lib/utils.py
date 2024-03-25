@@ -121,6 +121,7 @@ def version2number(version_string):
 
 def restart_app():
     bt.logging.info("App restarted due to the update")
+    wandb.finish()
     python = sys.executable
     os.execl(python, python, *sys.argv)
     

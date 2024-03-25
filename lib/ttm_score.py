@@ -25,21 +25,11 @@ class MetricEvaluator:
         return snr
 
     @staticmethod
-    def calculate_smoothness(file_path, silence_threshold=1e-10):
-        audio_signal, _ = torchaudio.load(file_path)
-        if torch.max(audio_signal) < silence_threshold:
-            return 0
-        amplitude_envelope = torch.abs(torch.from_numpy(np.abs(hilbert(audio_signal[0].numpy()))))
-        amplitude_differences = torch.abs(amplitude_envelope[1:] - amplitude_envelope[:-1])
-        smoothness = torch.mean(amplitude_differences)
-        return smoothness.item()
-
-    @staticmethod
     def calculate_consistency(file_path, text):
         try:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            pt_file = hf_hub_download(repo_id="lukewys/laion_clap", filename="630k-best.pt")
-            clap_metric = CLAPTextConsistencyMetric(pt_file).to(device)
+            pt_file = hf_hub_download(repo_id="lukewys/laion_clap", filename="music_audioset_epoch_15_esc_90.14.pt")
+            clap_metric = CLAPTextConsistencyMetric(pt_file, model_arch='HTSAT-base').to(device)
             def convert_audio(audio, from_rate, to_rate, to_channels):
                 resampler = torchaudio.transforms.Resample(orig_freq=from_rate, new_freq=to_rate)
                 audio = resampler(audio)
@@ -48,9 +38,9 @@ class MetricEvaluator:
                 return audio
 
             audio, sr = torchaudio.load(file_path)
-            audio = convert_audio(audio, from_rate=sr, to_rate=48000, to_channels=1)
+            audio = convert_audio(audio, from_rate=sr, to_rate=sr, to_channels=1)
 
-            clap_metric.update(audio.unsqueeze(0), [text], torch.tensor([audio.shape[1]]), torch.tensor([48000]))
+            clap_metric.update(audio.unsqueeze(0), [text], torch.tensor([audio.shape[1]]), torch.tensor([sr]))
             consistency_score = clap_metric.compute()
             return consistency_score
         except Exception as e:
@@ -69,22 +59,26 @@ class MusicQualityEvaluator:
             bt.logging.error(f"Failed to calculate SNR")
 
         try:
-            smoothness_score = MetricEvaluator.calculate_smoothness(file_path)
-            bt.logging.info(f'.......Smoothness Score......: {smoothness_score}')
-        except:
-            bt.logging.error(f"Failed to calculate Smoothness score")
-
-        try:
             consistency_score = MetricEvaluator.calculate_consistency(file_path, text)
-            bt.logging.info(f'.......Consistency Score......: {consistency_score}')
+            bt.logging.info(f'....... Consistency Score ......: {consistency_score}')
         except:
             bt.logging.error(f"Failed to calculate Consistency score")
 
         # Normalize scores and calculate aggregate score
         normalized_snr = 1 / (1 + np.exp(-snr_score / 20))
-        normalized_smoothness = 1 - smoothness_score if smoothness_score is not None else 1
         normalized_consistency = (consistency_score + 1) / 2 if consistency_score is not None and consistency_score >= 0 else 0
 
-        aggregate_score = (normalized_snr + normalized_smoothness + normalized_consistency) / 3.0 if consistency_score >=0 else 0
-        bt.logging.info(f'.......Aggregate Score......: {aggregate_score}')
+        if consistency_score is not None:
+            if consistency_score > 0:
+                normalized_consistency = (consistency_score + 1) / 2  # Normalizes from [0, 1] to [0.5, 1]
+            else:
+                normalized_consistency = 0  # Ensures that a consistency_score of 0 or any negative value yields a normalized score of 0
+        else:
+            normalized_consistency = 0  # Handles cases where consistency_score is None
+
+        bt.logging.info(f'....... Normalized SNR {normalized_snr}DB - Normalized Consistency {normalized_consistency} ......')
+        bt.logging.info(f'....... SNR {snr_score}DB - Consistency {consistency_score} ......')
+        aggregate_score = 0.6 * normalized_snr + 0.4 * normalized_consistency 
+        aggregate_score = aggregate_score if consistency_score >= 0.2 else 0
+        bt.logging.info(f'....... Aggregate Score ......: {aggregate_score}')
         return aggregate_score
