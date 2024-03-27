@@ -22,8 +22,13 @@ import numpy as np
 
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Determine variable state directory
+audio_subnet_vardir = os.getenv("AUDIOSUBNET_VARDIR")
+
 # Set the 'AudioSubnet' directory path
 audio_subnet_path = os.path.abspath(project_root)
+audio_file_path = os.path.join(audio_subnet_vardir or audio_subnet_path, "input_file.wav")
 # Add the project root and 'AudioSubnet' directories to sys.path
 sys.path.insert(0, project_root)
 sys.path.insert(0, audio_subnet_path)
@@ -104,8 +109,8 @@ class VoiceCloningService(AIModelService):
                 audio_array = vc_voice['array']
                 sampling_rate = vc_voice['sampling_rate']
                 self.hf_voice_id = vc_voice['path'].split("/")[-1][:10]
-                sf.write('input_file.wav', audio_array, sampling_rate)
-                self.audio_file_path = os.path.join(audio_subnet_path, "input_file.wav")
+                sf.write(audio_file_path, audio_array, sampling_rate)
+                self.audio_file_path = audio_file_path
                 waveform, _ = torchaudio.load(self.audio_file_path)
                 clone_input = waveform.tolist()
                 sample_rate = sampling_rate
