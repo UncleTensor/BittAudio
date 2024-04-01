@@ -76,8 +76,7 @@ class MusicQualityEvaluator:
         else:
             normalized_consistency = 0  # Handles cases where consistency_score is None
 
-        bt.logging.info(f'....... Normalized SNR {normalized_snr}DB - Normalized Consistency {normalized_consistency} ......')
-        bt.logging.info(f'....... SNR {snr_score}DB - Consistency {consistency_score} ......')
+        bt.logging.info(f'Normalized Metrics: SNR = {normalized_snr}dB, Consistency = {normalized_consistency}')
         aggregate_score = 0.6 * normalized_snr + 0.4 * normalized_consistency 
         aggregate_score = aggregate_score if consistency_score >= 0.2 else 0
         bt.logging.info(f'....... Aggregate Score ......: {aggregate_score}')

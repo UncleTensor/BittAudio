@@ -24,6 +24,7 @@ import subprocess
 from huggingface_hub import hf_hub_download
 from lib import __spec_version__ as spec_version
 from classes.corcel_prompt import CorcelAPI
+from lib.globals import service_flags
 
 class AIModelService:
     _scores = None
@@ -39,14 +40,15 @@ class AIModelService:
         self.subtensor = bt.subtensor(config=self.config)
         self.dendrite = bt.dendrite(wallet=self.wallet)
         self.metagraph = self.subtensor.metagraph(self.config.netuid)
+        self.service_flags = service_flags
 
         if not AIModelService._base_initialized:
             bt.logging.info(f"Wallet: {self.wallet}")
             bt.logging.info(f"Subtensor: {self.subtensor}")
             bt.logging.info(f"Dendrite: {self.dendrite}")
             bt.logging.info(f"Metagraph: {self.metagraph}")
-
             AIModelService._base_initialized = True
+            
         self.api = CorcelAPI()
         self.priority_uids(self.metagraph)
         self.p = inflect.engine()
@@ -63,7 +65,7 @@ class AIModelService:
         parser.add_argument("--alpha", default=0.75, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
         parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
-        parser.add_argument("--vcdnp", type=int, default=15, help="Number of miners to query for each forward call.")
+        parser.add_argument("--vcdnp", type=int, default=10, help="Number of miners to query for each forward call.")
         parser.add_argument("--auto_update", type=str, default='yes', help="Auto update option for github repository updates.")
 
         # Add Bittensor specific arguments
@@ -74,7 +76,7 @@ class AIModelService:
         # Parse and return the config
         config = bt.config(parser)
         return config
-    
+
     def priority_uids(self, metagraph):
         hotkeys = metagraph.hotkeys  # List of hotkeys
         coldkeys = metagraph.coldkeys  # List of coldkeys

@@ -19,7 +19,7 @@
 
 # TODO(developer): Change this value when updating your code base.
 # Define the version of the lib module.
-__version__ = "3.3.0"
+__version__ = "3.3.1"
 version_split = __version__.split(".")
 __spec_version__ = (
     (1000 * int(version_split[0]))
@@ -48,7 +48,7 @@ BLACKLISTED_MINER_COLDKEYS = ['5E2RHBCtUcbw5KTGvMWfeaUXKrmcrDVvqYb7EWmZzqfbFHBH'
 BLACKLISTED_MINER_HOTKEYS = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe','5HBVrFGy6oYhhh71m9fFGYD7zbKyAeHnWN8i8s9fJTBMCtEE']
 
 BLACKLISTED_VALIDATORS = ['5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe']
-legit_validators = ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3', 
+legit_validators = ['5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3',
     '5HbLYXUBy1snPR8nfioQ7GoA9x76EELzEq9j7F32vWUQHm1x',
     '5Hddm3iBFD2GLT5ik7LZnT3XJUnRnN8PoeCFgGQgawUVKNm8',
     '5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2',
@@ -81,3 +81,4 @@ from . import reward
 from . import clone_score
 from . import utils
 from . import subjective
+from . import globals

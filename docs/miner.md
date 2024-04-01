@@ -86,7 +86,7 @@ python neurons/miner.py \
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark'   | The model to use for text-to-speech.|
+| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark' ; 'MeloTTS'  | The model to use for text-to-speech.|
 | **Text To Music Model** | `--music_model`                           | 'facebook/musicgen-medium' ; 'facebook/musicgen-large'       | The model to use for Text-To-Music |
 | **Voice Clone Model** | `--clone_model`                           | 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
 | **Music Finetuned Model** | `--music_path`                           | /path/to/model | The model to use for Text-To-Music |

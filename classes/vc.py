@@ -65,7 +65,7 @@ class VoiceCloningService(AIModelService):
     async def run_async(self):
         step = 0
         running_tasks = []
-        while True:
+        while self.service_flags["VoiceCloningService"]:
             try:
                 new_tasks = await self.main_loop_logic(step)
                 running_tasks.extend(new_tasks)
@@ -89,14 +89,14 @@ class VoiceCloningService(AIModelService):
         if step % 300 == 0:
             async with self.lock:
                 if c_prompt:
-                    bt.logging.info(f"--------------------------------- Prompt and voices are being used from Corcel API for Voice Clone at Step: {step} ---------------------------------")
+                    bt.logging.info(f"--------------------------------- Prompt and voices are being used from Corcel API for Voice Clone ---------------------------------")
                     self.text_input = self.convert_numeric_values(c_prompt)  # Use the prompt from the API
                     bt.logging.info(f"______________VC-Prompt coming from Corcel______________: {self.text_input}")
                     if len(c_prompt) > 256:
                         pass
                 else:
                     # Fetch prompts from HuggingFace if API failed
-                    bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone at Step: {step} ---------------------------------")
+                    bt.logging.info(f"--------------------------------- Prompt and voices are being used from HuggingFace Dataset for Voice Clone ---------------------------------")
                     self.text_input = random.choice(self.prompts)
                     self.text_input = self.convert_numeric_values(self.text_input)
                 while len(self.text_input) > 256:
@@ -144,11 +144,13 @@ class VoiceCloningService(AIModelService):
                 filtered_axons,
                 lib.protocol.VoiceClone(text_input=text_input, clone_input=clone_input, sample_rate=sample_rate, hf_voice_id="name"), 
                 deserialize=True,
-                timeout=150
+                timeout=150,
             )
             # Process the responses if needed
             processed_vc_file = self.process_voice_clone_responses(filtered_axons, text_input, input_file)
             bt.logging.info(f"Updated Scores for Voice Cloning: {self.scores}")
+            self.service_flags["VoiceCloningService"] = False
+            self.service_flags["TextToSpeechService"] = True
             return processed_vc_file
         except Exception as e:
             print(f"An error occurred while processing the voice clone: {e}")
@@ -224,7 +226,7 @@ class VoiceCloningService(AIModelService):
         except Exception as e:
             bt.logging.error(f"Error scoring output: {e}")
             return 0.0  # Return a default score in case of an error
-        
+    
     def get_filtered_axons_from_combinations(self):
         if not self.combinations:
             self.get_filtered_axons()

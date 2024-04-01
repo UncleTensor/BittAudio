@@ -30,15 +30,13 @@ class TextToSpeechService(AIModelService):
     def __init__(self):
         super().__init__()  # Initializes base class components
         self.load_prompts()
-        self.total_dendrites_per_query = 15
+        self.total_dendrites_per_query = 10
         self.minimum_dendrites_per_query = 3  # Example value, adjust as needed
         self.current_block = self.subtensor.block
         self.filtered_axon = []
         self.last_updated_block = self.current_block - (self.current_block % 100)
         self.last_reset_weights_block = self.current_block
         self.p_index = 0
-        self.last_run_start_time = dt.datetime.now()
-        self.tao = self.metagraph.neurons[self.uid].stake.tao
         self.combinations = []
         self.lock = asyncio.Lock()
         
@@ -47,52 +45,12 @@ class TextToSpeechService(AIModelService):
         self.prompts = gs_dev['train']['text']
         return self.prompts
         
-        
-    def check_and_update_wandb_run(self):
-        # Calculate the time difference between now and the last run start time
-        current_time = dt.datetime.now()
-        time_diff = current_time - self.last_run_start_time
-        # Check if 4 hours have passed since the last run start time
-        if time_diff.total_seconds() >= 4 * 3600:  # 4 hours * 3600 seconds/hour
-            self.last_run_start_time = current_time  # Update the last run start time to now
-            if self.wandb_run:
-                wandb.finish()  # End the current run
-            self.new_wandb_run()  # Start a new run
-
-    def new_wandb_run(self):
-        now = dt.datetime.now()
-        run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
-        name = f"Validator-{self.uid}-{run_id}"
-        commit = self.get_git_commit_hash()
-        self.wandb_run = wandb.init(
-            name=name,
-            project="AudioSubnet_Valid",
-            entity="subnet16team",
-            config={
-                "uid": self.uid,
-                "hotkey": self.wallet.hotkey.ss58_address,
-                "run_name": run_id,
-                "type": "Validator",
-                "tao (stake)": self.tao,
-                "commit": commit,
-            },
-            tags=self.sys_info,
-            allow_val_change=True,
-            anonymous="allow",
-        )
-        bt.logging.debug(f"Started a new wandb run: {name}")
-
     async def run_async(self):
-        step = 0
-
-        while True:
-            self.check_and_update_wandb_run()
+        step = 1
+        while self.service_flags["TextToSpeechService"]:
             try:
                 await self.main_loop_logic(step)
                 step += 1
-                await asyncio.sleep(0.5)  # Adjust the sleep time as needed
-                if step % 50 == 0 and self.config.auto_update == 'yes':
-                    lib.utils.try_update()
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting TextToSpeechService.")
                 break
@@ -108,22 +66,22 @@ class TextToSpeechService(AIModelService):
             bt.logging.error(f"An error occurred while fetching prompt: {e}")
             c_prompt = None
         # Sync and update weights logic
-        if step % 10 == 0:
+        if step:
             self.metagraph.sync(subtensor=self.subtensor)
             bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
         
-        if step % 5 == 0:
+        if step:
             async with self.lock:
                 # Use the API prompt if available; otherwise, load prompts from HuggingFace
                 if c_prompt:
-                    bt.logging.info(f"--------------------------------- Prompt are being used from Corcel API for Text-To-Speech at Step: {step} --------------------------------- ")
+                    bt.logging.info(f"--------------------------------- Prompt are being used from Corcel API for Text-To-Speech --------------------------------- ")
                     g_prompt = self.convert_numeric_values(c_prompt)  # Use the prompt from the API
                     bt.logging.info(f"______________TTS-Prompt coming from Corcel______________: {g_prompt}")
                     if len(g_prompt) > 256:
                         pass
                 else:
                     # Fetch prompts from HuggingFace if API failed
-                    bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for Text-To-Speech at Step: {step} --------------------------------- ")
+                    bt.logging.info(f"--------------------------------- Prompt are being used from HuggingFace Dataset for Text-To-Speech --------------------------------- ")
                     g_prompt = self.load_prompts()
                     g_prompt = random.choice(g_prompt)  # Choose a random prompt from HuggingFace
                     g_prompt = self.convert_numeric_values(g_prompt)
@@ -139,7 +97,7 @@ class TextToSpeechService(AIModelService):
                 self.process_responses(filtered_axons, responses, g_prompt)
 
                 if self.last_reset_weights_block + 50 < self.current_block:
-                    bt.logging.trace(f"Clearing weights for validators and nodes without IPs")
+                    bt.logging.info(f"Resetting weights for validators and nodes without IPs")
                     self.last_reset_weights_block = self.current_block        
                     # set all nodes without ips set to 0
                     self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
@@ -157,15 +115,18 @@ class TextToSpeechService(AIModelService):
     
     def update_block(self):
         self.current_block = self.subtensor.block
-        if self.current_block - self.last_updated_block > 150:
-            bt.logging.info(f"Updating weights. Last update was at block {self.last_updated_block}")
-            bt.logging.info(f"Current block is {self.current_block}")
+        if self.current_block - self.last_updated_block > 120:
+            bt.logging.info(f"Updating weights. Last update was at block: {self.last_updated_block}")
+            bt.logging.info(f"Current block is for weight update is: {self.current_block}")
             self.update_weights(self.scores)
             self.last_updated_block = self.current_block
+            bt.logging.info(f"Checking for github update.")                    
+            if self.config.auto_update == 'yes':
+                lib.utils.try_update()
         else:
             bt.logging.info(f"Updating weights. Last update was at block:  {self.last_updated_block}")
             bt.logging.info(f"Current block is: {self.current_block}")
-            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 150}")
+            bt.logging.info(f"Next update will be at block: {self.last_updated_block + 120}")
             bt.logging.info(f"Skipping weight update. Last update was at block {self.last_updated_block}")
 
     def process_responses(self,filtered_axons, responses, prompt):
@@ -175,7 +136,8 @@ class TextToSpeechService(AIModelService):
         
         bt.logging.info(f"Scores after update in TTS: {self.scores}")
         self.update_block()
-
+        self.service_flags["TextToSpeechService"] = False
+        self.service_flags["MusicGenerationService"] = True
 
     def process_response(self, axon, response, prompt):
         try:
@@ -217,7 +179,7 @@ class TextToSpeechService(AIModelService):
             # Save the audio file
             if model_name == "suno/bark":
                 sampling_rate = 24000 
-            elif model_name == "elevenlabs/eleven": 
+            elif model_name == "elevenlabs/eleven" or model_name == "MeloTTS": 
                 sampling_rate = 44000
             else:
                 sampling_rate = 16000
@@ -320,6 +282,7 @@ class TextToSpeechService(AIModelService):
     
     def update_weights(self, scores):
         # Process scores for blacklisted miners
+        MAX_WEIGHT_UPDATE_TRY = 3
         for idx, uid in enumerate(self.metagraph.uids):
             neuron = self.metagraph.neurons[uid]
             if neuron.coldkey in lib.BLACKLISTED_MINER_COLDKEYS or neuron.hotkey in lib.BLACKLISTED_MINER_HOTKEYS:
@@ -345,14 +308,17 @@ class TextToSpeechService(AIModelService):
 
         try:
             # Set weights on the Bittensor network
-            result = self.subtensor.set_weights(
-                netuid=self.config.netuid,  # Subnet to set weights on
-                wallet=self.wallet,         # Wallet to sign set weights using hotkey
-                uids=processed_uids,        # Uids of the miners to set weights for
-                weights=processed_weights, # Weights to set for the miners
-                wait_for_finalization=True,
-                version_key=self.version,
-            )
+            for i in range(MAX_WEIGHT_UPDATE_TRY):
+                bt.logging.info(f"Setting weights for the subnet: {self.config.netuid} with the iteration: {i+1}")
+                result = self.subtensor.set_weights(
+                    netuid=self.config.netuid,  # Subnet to set weights on
+                    wallet=self.wallet,         # Wallet to sign set weights using hotkey
+                    uids=processed_uids,        # Uids of the miners to set weights for
+                    weights=processed_weights, # Weights to set for the miners
+                    wait_for_finalization=False,
+                    wait_for_inclusion=False,
+                    version_key=self.version,
+                )
 
             if result:
                 bt.logging.success(f'Successfully set weights. result: {result}')
