@@ -187,7 +187,7 @@ class TextToSpeechService(AIModelService):
             print(f"Saved audio file to {output_path}")
             try:
                 uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                wandb.log({f"Text to Speech prompt:{prompt} ": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                wandb.log({f"Text to Speech prompt:{prompt[:150]}.....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
                 bt.logging.success(f"TTS Audio file uploaded to wandb successfully for Hotkey {axon.hotkey}")
             except Exception as e:
                 bt.logging.error(f"Error uploading TTS audio to wandb for Hotkey {axon.hotkey}: {e}")

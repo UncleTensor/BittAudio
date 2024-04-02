@@ -206,7 +206,7 @@ class VoiceCloningService(AIModelService):
                     bt.logging.info(f"The cloned file have been saved successfully: {cloned_file_path}")
                     try:
                         uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                        wandb.log({f"Voice Clone Prompt: {response.text_input}": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                        wandb.log({f"Voice Clone Prompt: {response.text_input[:150]}....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
                         bt.logging.success(f"Voice Clone Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and uid {uid_in_metagraph}")
                     except Exception as e:
                         bt.logging.error(f"Error uploading Voice Clone Audio file to wandb: {e}")
