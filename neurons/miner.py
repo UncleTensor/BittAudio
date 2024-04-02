@@ -416,6 +416,7 @@ def main(config):
             print(f"An error occurred while clonning the file: {e}")
         
         synapse.clone_output = speech
+        synapse.clone_input = None
         return synapse
 
 ########################################### Text to Speech ##########################################    
