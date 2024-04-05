@@ -86,7 +86,6 @@ class VoiceCloningService(AIModelService):
         except Exception as e:
             bt.logging.error(f"An error occurred while fetching prompt: {e}")
             c_prompt = None
-        if step % 300 == 0:
             async with self.lock:
                 if c_prompt:
                     bt.logging.info(f"--------------------------------- Prompt and voices are being used from Corcel API for Voice Clone ---------------------------------")
@@ -194,7 +193,7 @@ class VoiceCloningService(AIModelService):
                     bt.logging.info(f"The cloned file for API have been saved successfully: {cloned_file_path}")
                     try:
                         uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                        wandb.log({f"Voice Clone Prompt: {prompt}": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                        wandb.log({f"Voice Clone Prompt: {prompt[:150]} ....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
                         bt.logging.success(f"Voice Clone Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and uid {uid_in_metagraph}")
                     except Exception as e:
                         bt.logging.error(f"Error uploading Voice Clone Audio file to wandb: {e}")

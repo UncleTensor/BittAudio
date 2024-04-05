@@ -19,7 +19,7 @@
 
 # TODO(developer): Change this value when updating your code base.
 # Define the version of the lib module.
-__version__ = "3.3.4"
+__version__ = "3.3.5"
 version_split = __version__.split(".")
 __spec_version__ = (
     (1000 * int(version_split[0]))
@@ -79,6 +79,5 @@ WHITELISTED_VALIDATORS = legit_validators
 from . import protocol
 from . import reward
 from . import clone_score
-from . import utils
 from . import subjective
 from . import globals

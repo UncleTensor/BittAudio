@@ -41,7 +41,23 @@ sudo npm install pm2 -g
 ## Running a Validator
 - To operate a validator, run the validator.py script with the required command-line arguments.
 
+## Starting with Auto Update script
+ - To start the validator with auto-update, run the start_valid.py script with the required command-line arguments.
+ - The script will automatically update the validator with the latest version.
+ - [Note: the validator will have to run this auto-update script in a screen session]
+
 ## Validator Command
+**With Auto Update ON**
+```bash
+python scripts/start_valid.py \
+    --pm2_name {name} \
+    --netuid 16 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+```
+
+**With Auto Update OFF**
 ```bash
 python neurons/validator.py \
     --netuid 16 \
@@ -70,7 +86,7 @@ pm2 start neurons/validator.py -- \
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
-| **Auto update repository**    | `--auto_update`                        | 'yes'                          | Auto update option for github repository updates.                                                                                    |
+| **PM2 process name**    | `--pm2_name`                        | 'SN16Miner'                          | Name for the pm2 process for Auto Update. |
 
 ### License
 Refer to the main README for the MIT License details.

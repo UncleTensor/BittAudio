@@ -38,7 +38,53 @@ sudo npm install pm2 -g
 ### Running a Miner
  - To operate a miner, run the miner.py script with the necessary configuration.
 
+### Starting with Auto Update script
+ - To start the miner with auto-update, run the start_miner.py script with the required command-line arguments.
+ - The script will automatically update the miner with the latest version.
+ - [Note: the miner will have to run this auto-update script in a screen session]
+
 ### Miner Commands
+**Start with Auto update**
+ - **Note: the miner will have to run this auto-update script in a screen session**
+```bash
+python scripts/start_miner.py -- \
+    --pm2_name {name} \
+    --netuid 16 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+    --model {tts-model} \
+    --music_model {ttm-model} \
+    --clone_model {vc-model} \
+    --axon.port {machine_port}
+```
+
+**Start with Auto update OFF**
+```bash
+pm2 start neurons/miner.py -- \
+    --netuid 16 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+    --model {tts-model} \
+    --music_path {ttm-model} \
+    --clone_model {vc-model} \
+    --axon.port {machine_port}
+```
+For running VC bark/voiceclone:
+```bash
+python neurons/miner.py \
+    --netuid 16 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --logging.debug \
+    --clone_model bark/voiceclone \
+    --music_model facebook/musicgen-medium \
+    --model {model} \
+    --axon.port {machine_port}
+```
+**Using miner with ElevenLabs**
+
 For running VC ElevenLabs API:
 ```bash
 echo "export ELEVEN_API={your_api_key_here}">>~/.bashrc && source ~/.bashrc
@@ -56,37 +102,12 @@ python neurons/miner.py \
     --model elevenlabs/eleven \
     --axon.port {machine_port}
 ```
-Start with pm2
-```bash
-pm2 start neurons/miner.py -- \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --model {tts-model} \
-    --music_path {ttm-model} \
-    --clone_model {vc-model} \
-    --axon.port {machine_port}
-```
-
-For running VC bark/voiceclone:
-```bash
-python neurons/miner.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --clone_model bark/voiceclone \
-    --music_model facebook/musicgen-medium \
-    --model {model} \
-    --axon.port {machine_port}
-```
 
 ### Bittensor Miner Script Arguments:
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark' ; 'MeloTTS'  | The model to use for text-to-speech.|
+| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark' ; 'MeloTTS'   | The model to use for text-to-speech.|
 | **Text To Music Model** | `--music_model`                           | 'facebook/musicgen-medium' ; 'facebook/musicgen-large'       | The model to use for Text-To-Music |
 | **Voice Clone Model** | `--clone_model`                           | 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
 | **Music Finetuned Model** | `--music_path`                           | /path/to/model | The model to use for Text-To-Music |
@@ -100,7 +121,7 @@ python neurons/miner.py \
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.|
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.|
 | **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.|
-| **Auto update repository**    | `--auto_update`                        | 'yes'                          | Auto update option for github repository updates. |
+| **PM2 process name**    | `--pm2_name`                        | 'SN16Miner'                          | Name for the pm2 process for Auto Update. |
 
 
 

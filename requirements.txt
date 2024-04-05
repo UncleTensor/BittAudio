@@ -4,7 +4,7 @@ torchaudio==2.1.0
 audiocraft==1.2.0
 laion-clap==1.1.4
 huggingface_hub==0.21.4 
-bittensor
+bittensor==6.9.3
 GPUtil==1.4.0
 elevenlabs==0.2.6
 encodec==0.1.1
@@ -39,3 +39,5 @@ num2words==0.5.12
 unidic_lite==1.0.8 
 unidic==1.1.0
 jieba==0.42.1
+tensorboardX
+pyOpenSSL

@@ -33,12 +33,7 @@ import wave
 import time
 import sys
 import os
-import wandb
-import platform
-import psutil
-import GPUtil
-import datetime as dt
-import subprocess
+
 
 # Set the project root path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -56,7 +51,6 @@ from models.text_to_speech_models import SunoBark, ElevenLabsTTS, EnglishTextToS
 from models.voice_clone import ElevenLabsClone  
 from models.bark_voice_clone import BarkVoiceCloning, ModelLoader
 import lib.protocol
-import lib.utils
 import lib
 
 
@@ -89,12 +83,9 @@ def get_config():
     parser.add_argument(
         "--bark_vc_path", default=None, help="Custom directory path for the Bark Voice Clone model."
     )
-    parser.add_argument(
-        "--auto_update", type=str, default='yes', help="Auto update option for github repository updates."
-    )
 
     # Adds override arguments for network and netuid.
-    parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
+    parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)
     bt.wallet.add_args(parser)
@@ -210,56 +201,7 @@ def main(config):
         )
         exit()
 
-    def get_git_commit_hash():
-        try:
-            # Run the git command to get the current commit hash
-            commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
-            return commit_hash
-        except subprocess.CalledProcessError:
-            # If the git command fails, for example, if this is not a git repository
-            bt.logging.error("Failed to get git commit hash. '.git' folder is missing")
-            return None
-    
-    def get_system_info():
-        system_info = {
-            "OS -v": platform.platform(),
-            "CPU ": os.cpu_count(),
-            "RAM": f"{psutil.virtual_memory().total / (1024**3):.2f} GB", 
-        }
-
-        gpus = GPUtil.getGPUs()
-        if gpus:
-            system_info["GPU"] = gpus[0].name 
-        # Convert dictionary to list of strings
-        tags = [f"{key}: {value}" for key, value in system_info.items()]
-        tags.append(lib.__version__)
-        return tags
-
-    # Each miner gets a unique identity (UID) in the network for differentiation.
     my_subnet_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
-    bt.logging.info(f"Running miner on uid: {my_subnet_uid}")
-    run_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    name = f"Miner-{my_subnet_uid}-{run_id}"
-    sys_info = get_system_info()
-    commit = get_git_commit_hash()
-
-    def start_wandb_run():
-        wandb.init(
-            name=name,
-            project="AudioSubnet_Miner", 
-            entity="subnet16team",
-            config={
-                "uid": my_subnet_uid,
-                "hotkey": wallet.hotkey.ss58_address,
-                "run_name": run_id,
-                "type": "miner",
-                "commit": commit,
-                },
-                allow_val_change=True,
-                tags=sys_info
-            )
-    start_wandb_run()  # Start the first WandB run
-    start_time = time.time()  # Mark the start time
 
 ############################### Voice Clone ##########################################
 
@@ -672,13 +614,6 @@ def main(config):
     step = 0
     while True:
         try:
-            current_time = time.time()
-            elapsed_time = current_time - start_time
-            if elapsed_time >= 14400:  # 4 hours = 14400 seconds
-                wandb.finish()  # Finish the current run
-                start_wandb_run()  # Start a new run
-                start_time = time.time()  # Reset the start time
-            # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
             if step % 500 == 0:
                 metagraph = subtensor.metagraph(config.netuid)
@@ -696,15 +631,9 @@ def main(config):
             step += 1
             time.sleep(1)
 
-            if step % 1000 == 0 and config.auto_update == 'yes':
-                lib.utils.try_update()
-
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
             axon.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
-            wandb.finish()
-            bt.logging.success("Wandb finished.")
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception as e:

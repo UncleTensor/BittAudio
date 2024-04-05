@@ -30,7 +30,6 @@ class SunoBark:
         self.device = torch.device("cuda")
         self.speaker_list = ["v2/en_speaker_0","v2/en_speaker_1","v2/en_speaker_2","v2/en_speaker_3","v2/en_speaker_4","v2/en_speaker_5","v2/en_speaker_6","v2/en_speaker_7","v2/en_speaker_8","v2/en_speaker_9"]
         self.model.to(self.device)
-
     def generate_speech(self, text_input):
         # Process the text wit speaker
         speaker = self.speaker_list[torch.multinomial(torch.ones(len(self.speaker_list)), 1).item()]
@@ -46,7 +45,6 @@ class EnglishTextToSpeech:
         self.model = VitsModel.from_pretrained(model_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.device = torch.device("cuda")
-
     def generate_speech(self, text_input):
         inputs = self.tokenizer(text_input, return_tensors="pt")
         with torch.no_grad():
@@ -57,7 +55,6 @@ class ElevenLabsTTS:
     def __init__(self, api_key):
         self.api_key = api_key
         self.voices = voices()
-
     def generate_speech(self,text_input):
         selected_voice = None
         audio = None
@@ -85,8 +82,6 @@ class MeloTTS:
         if not os.path.isdir(melo_dir):
             os.system('git clone https://github.com/myshell-ai/MeloTTS.git')
             os.system('python -m unidic download')
-
-        # Dynamically add the MeloTTS directory to sys.path
         sys.path.append(melo_dir)
 
     def _load_model(self):
