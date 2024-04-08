@@ -33,13 +33,13 @@ For comprehensive benchmarks and performance evaluations, please refer to the [B
 4. **Reward Distribution:** Based on the quality assessment, the Validator rewards Miners accordingly. Miners with consistently higher-quality outputs receive a larger share of rewards.
 
 ## Data Sources
-To combat potential data exhaustion and ensure uniqueness, our subnet has integrated with the Corcel API, part of Bittensor Subnetwork 18. This integration allows Validators to generate synthetic, unique prompts, significantly reducing redundancy risks and improving network security, thus our subnet has taken a step towards strengthening the Bittensor ecosystem.<br>
-**SN 18 - Cortex.t (Corcel API):**
+To combat potential data exhaustion and ensure uniqueness, our subnet has integrated with the Corcel API, part of Bittensor Subnetwork 18. This integration allows Validators to generate synthetic, unique prompts, significantly reducing redundancy risks and improving network security, thus our subnet has taken a step towards strengthening the Bittensor ecosystem.<br><br>
+**SN 18 - Cortex.t (Corcel API):**<br>
 https://docs.corcel.io/reference/cortext-text
 
 To ensure there is no downtime in Corcel API, Validators utilize a diverse dataset, selecting prompts randomly from a pool of 678K entries for TTS, VC, and 500K prompts TTM services.
 
-**Data used from HuggingFace for TTS, VC and TTM:**
+**Data used from HuggingFace for TTS, VC and TTM:**<br>
 •	TTS and VC prompts (currently 678K) <br>
 https://huggingface.co/datasets/etechgrid/Prompts_for_Voice_cloning_and_TTS <br>
 •	VC Voice embeddings (163 unique speakers) <br>
