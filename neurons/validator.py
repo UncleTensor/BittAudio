@@ -95,10 +95,6 @@ sys.path.insert(0, audio_subnet_path)
 from ttm.ttm import MusicGenerationService
 from ttm.aimodel import AIModelService
 
-# Check if the 'app' folder exists
-if os.path.exists(os.path.join(project_root, 'app')):
-    from app.fastapi_server import create_app
-
 
 class AIModelController():
     def __init__(self):
