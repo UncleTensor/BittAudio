@@ -25,7 +25,7 @@ class MusicGeneration(bt.Synapse, BaseModel):
         description="The machine learning model employed for music generation. Supported models: "
                     "'facebook/musicgen-medium', 'facebook/musicgen-large'."
     )
-    music_output: Optional[List[Any]] = Field(
+    music_output: List[Any] = Field(
         default=None,
         title="Music Output",
         description="The resultant music data, encoded as a list of bytes, generated from the text input."
