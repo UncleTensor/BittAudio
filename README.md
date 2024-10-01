@@ -80,7 +80,7 @@ The hardware requirements for miners and validators vary depending on the comple
 To operate a validator, you need to run the validator.py script with the required command-line arguments. This script initiates the setup of Bittensor objects, establishes a connection to the network, queries miners, scores their responses, and updates weights accordingly.
 
 **How to Run a Miner:**<br>
-To operate a miner, run the miner.py script with the necessary configuration. This process involves initializing Bittensor objects, establishing a connection to the network, and processing incoming TTS/VC/TTM requests.
+To operate a miner, run the miner.py script with the necessary configuration. This process involves initializing Bittensor objects, establishing a connection to the network, and processing incoming TTM requests.
 
 **TTM Models Supported:**<br>
 The code incorporates various Text-to-Music models. The specific requirements for each model, including CPU, GPU VRAM, RAM, and disk space, are not explicitly stated in the provided code. For these type of requirements, it may be necessary to consult the documentation or delve into the implementation details of these models.
