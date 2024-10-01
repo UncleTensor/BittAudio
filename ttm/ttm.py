@@ -248,11 +248,6 @@ class MusicGenerationService(AIModelService):
         queryable_uids = (self.metagraph.total_stake >= 0)
         # Remove the weights of miners that are not queryable.
         queryable_uids = torch.Tensor(queryable_uids) * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
-        queryable_uid = queryable_uids * torch.Tensor([
-            any(self.metagraph.neurons[uid].axon_info.ip == ip for ip in lib.BLACKLISTED_IPS) or
-            any(self.metagraph.neurons[uid].axon_info.ip.startswith(prefix) for prefix in lib.BLACKLISTED_IPS_SEG)
-            for uid in uids
-        ])
         active_miners = torch.sum(queryable_uids)
         dendrites_per_query = self.total_dendrites_per_query
 
@@ -270,12 +265,8 @@ class MusicGenerationService(AIModelService):
                 dendrites_per_query = self.minimum_dendrites_per_query
         # zip uids and queryable_uids, filter only the uids that are queryable, unzip, and get the uids
         zipped_uids = list(zip(uids, queryable_uids))
-        zipped_uid = list(zip(uids, queryable_uid))
         filtered_zipped_uids = list(filter(lambda x: x[1], zipped_uids))
         filtered_uids = [item[0] for item in filtered_zipped_uids] if filtered_zipped_uids else []
-        filtered_zipped_uid = list(filter(lambda x: x[1], zipped_uid))
-        filtered_uid = [item[0] for item in filtered_zipped_uid] if filtered_zipped_uid else []
-        self.filtered_axon = filtered_uid
         subset_length = min(dendrites_per_query, len(filtered_uids))
         # Shuffle the order of members
         random.shuffle(filtered_uids)
@@ -289,11 +280,6 @@ class MusicGenerationService(AIModelService):
     def update_weights(self, scores):
         # Process scores for blacklisted miners
         MAX_WEIGHT_UPDATE_TRY = 3
-        for idx, uid in enumerate(self.metagraph.uids):
-            neuron = self.metagraph.neurons[uid]
-            if neuron.coldkey in lib.BLACKLISTED_MINER_COLDKEYS or neuron.hotkey in lib.BLACKLISTED_MINER_HOTKEYS:
-                scores[idx] = 0.0
-                bt.logging.info(f"Blacklisted miner detected: {uid}. Score set to 0.")
 
         # Normalize scores to get weights
         weights = torch.nn.functional.normalize(scores, p=1, dim=0)
