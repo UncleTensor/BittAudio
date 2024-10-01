@@ -42,8 +42,5 @@ class MusicGeneration(bt.Synapse, BaseModel):
         """
         Processes and returns the music_output into a format ready for audio rendering or further analysis.
         """
-        if self.music_output is None:
-            raise ValueError("Cannot deserialize because music_output is None")
-        
-        # Return the music output if it's present
-        return self.music_output
+        return self
+    
