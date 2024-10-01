@@ -94,7 +94,11 @@ class MusicGenerationService(AIModelService):
         elif duration == 30:
             self.duration = 1510
             self.time_out = 200
-
+        print("--------------------------------------------------------")
+        print(f"Duration: {self.duration}")
+        print(f"filtered_axons: {filtered_axons}")
+        print(f"Prompt: {prompt}")
+        print("--------------------------------------------------------")
         """Queries the network with filtered axons and prompt."""
         responses = self.dendrite.query(
             filtered_axons,
