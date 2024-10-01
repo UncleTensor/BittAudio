@@ -81,6 +81,7 @@ class MusicGenerationService(AIModelService):
                 bt.logging.info(f"Resetting weights for validators and nodes without IPs")
                 self.last_reset_weights_block = self.current_block        
                 # set all nodes without ips set to 0
+                self.scores = torch.Tensor(self.scores)  # Convert NumPy array to PyTorch tensor
                 self.scores = self.scores * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in self.metagraph.uids])
 
         except Exception as e:
