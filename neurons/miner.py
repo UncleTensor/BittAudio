@@ -50,7 +50,7 @@ def get_config():
     parser.add_argument("--music_path", default=None, help="Path to a custom finetuned model for Music Generation.")
 
     # Add Bittensor specific arguments
-    parser.add_argument("--netuid", type=int, default=50, help="The chain subnet uid.")
+    parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)
     bt.wallet.add_args(parser)
@@ -87,7 +87,6 @@ def main(config):
         bt.logging.error(f"Error initializing Text-To-Music model: {e}")
         exit(1)
 
-    MIN_STAKE = 10000
     # Bittensor object setup
     wallet = bt.wallet(config=config)
     bt.logging.info(f"Wallet: {wallet}")
@@ -107,19 +106,13 @@ def main(config):
 
     ######################## Text to Music Processing ########################
 
+    # The blacklist function decides if a request should be ignored.
     def music_blacklist_fn(synapse: protocol.MusicGeneration) -> typing.Tuple[bool, str]:
         if synapse.dendrite.hotkey not in metagraph.hotkeys:
-            # Ignore requests from unrecognized entities.
-            bt.logging.trace(
-                f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
-            )
+            bt.logging.trace(f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}")
             return True, "Unrecognized hotkey"
-        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < MIN_STAKE:
-            # Ignore requests from entities with low stake.
-            bt.logging.trace(
-                f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
-            )
-            return True, "Low stake"
+        else:
+            return False, "Accepted"
 
     # The priority function determines the request handling order.
     def music_priority_fn(synapse: protocol.MusicGeneration) -> float:
