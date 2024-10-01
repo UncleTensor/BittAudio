@@ -28,6 +28,7 @@ conda activate {conda-env}
 ```bash
 git clone https://github.com/UncleTensor/BittAudio.git
 cd BittAudio
+pip install git+https://github.com/facebookresearch/audiocraft.git
 pip install -e .
 pip install -r requirements.txt
 wandb login
