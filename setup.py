@@ -46,12 +46,12 @@ with codecs.open(
     version_string = version_match.group(1)
 
 setup(
-    name="ttm_bittensor_subnet",
+    name="BittAudio",
     version=version_string,
-    description="ttm_bittensor_subnet",
+    description="BittAudio",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/1MuhammadFarhanAslam/NewTTM.git",
+    url="https://github.com/UncleTensor/BittAudio.git",
     author="ttm",
     packages=find_packages(),
     include_package_data=True,
