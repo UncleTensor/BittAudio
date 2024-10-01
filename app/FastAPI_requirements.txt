@@ -25,7 +25,7 @@ requests==2.31.0
 requests-toolbelt==1.0.0
 SQLAlchemy==1.4.51            #updated with 2.0.35
 starlette==0.35.1
-slowapi== 0.1.9
+# slowapi== 0.1.9
 ujson==5.9.0
 urllib3==2.1.0
 uvicorn==0.26.0
