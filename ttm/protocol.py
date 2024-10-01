@@ -1,37 +1,34 @@
-from typing import List, Optional, Any
 import bittensor as bt
+from typing import List, Optional, Literal, Any
 from pydantic import BaseModel, Field
 
-class MusicGeneration(bt.Synapse):
+
+class MusicGeneration(bt.Synapse, BaseModel):
     """
-    A class that transforms textual descriptions into music using machine learning models 
-    such as 'facebook/musicgen-medium' and 'facebook/musicgen-large'. 
-    Extends bt.Synapse, facilitating its integration into a broader neural-based generative system.
+    A class that transforms textual descriptions into music using machine learning models such as 
+    'facebook/musicgen-medium' and 'facebook/musicgen-large'. Extends bt.Synapse for seamless integration into a 
+    broader neural-based generative system.
     """
     class Config:
-        """
-        Configuration class that mandates validation on attribute assignments, ensuring correctness 
-        and reliability of data for MusicGeneration instances.
-        """
+        """ Configuration for validation on attribute assignment and strict data handling. """
         validate_assignment = True
         protected_namespaces = ()
 
-    text_input: Optional[str] = Field(
-        default=None,
+    text_input: str = Field(
+        ...,
         title="Text Input",
         description="Textual directives or descriptions intended to guide the music generation process."
     )
-    
-    model_name: Optional[str] = Field(
-        default=None,
+    model_name: Optional[Literal['facebook/musicgen-medium', 'facebook/musicgen-large']] = Field(
+        'facebook/musicgen-medium',
         title="Model Name",
-        description="The machine learning model employed for music generation. Supported models: 'facebook/musicgen-medium', 'facebook/musicgen-large'."
+        description="The machine learning model employed for music generation. Supported models: "
+                    "'facebook/musicgen-medium', 'facebook/musicgen-large'."
     )
-    
     music_output: Optional[List[Any]] = Field(
-        default_factory=list,  # Initialize an empty list by default
+        default=None,
         title="Music Output",
-        description="The resultant music data, encoded as a list, generated from the text input."
+        description="The resultant music data, encoded as a list of bytes, generated from the text input."
     )
     
     duration: Optional[int] = Field(
@@ -40,9 +37,10 @@ class MusicGeneration(bt.Synapse):
         description="The length of the generated music piece, specified in seconds."
     )
 
-    def deserialize(self) -> List[Any]:
+
+    def deserialize(self) -> List:
         """
         Processes and returns the music_output into a format ready for audio rendering or further analysis.
-        Returns the music_output list.
         """
-        return self.music_output
+        return self
+    
