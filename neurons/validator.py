@@ -160,16 +160,13 @@ class AIModelController():
 
 async def setup_and_run(controller):
     tasks = []
-    if os.path.exists(os.path.join(project_root, 'app')):
-        secret_key = os.getenv("AUTH_SECRET_KEY")
-        if not secret_key:
-            pass
-            # raise ValueError("Auth Secret key not found in environment variable AUTH_SECRET_KEY")
+    secret_key = os.getenv("AUTH_SECRET_KEY")
+    if os.path.exists(os.path.join(project_root, 'app')) and secret_key:
         app = create_app(secret_key)
         # Start FastAPI with ngrok without blocking
         ngrok_tunnel, server_task = await controller.run_fastapi_with_ngrok(app)
         tasks.append(server_task)  # Keep track of the server task if you need to cancel it later
-    
+            
     # Start service-related tasks
     service_task = asyncio.create_task(controller.run_services())
     tasks.append(service_task)
