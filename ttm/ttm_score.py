@@ -92,48 +92,34 @@ class MusicQualityEvaluator:
         self.aggregator = Aggregator()
 
     def evaluate_music_quality(self, file_path, text=None):
-        # Initialize scores as None
-        snr_score, hnr_score, consistency_score = None, None, None
-
-        # Calculate SNR score
         try:
             snr_score = self.metric_evaluator.calculate_snr(file_path)
             bt.logging.info(f'.......SNR......: {snr_score} dB')
-        except Exception as e:
-            bt.logging.error(f"Failed to calculate SNR: {e}")
+        except:
+            pass
+            bt.logging.error(f"Failed to calculate SNR")
 
-        # Calculate HNR score
         try:
             hnr_score = self.metric_evaluator.calculate_hnr(file_path)
             bt.logging.info(f'.......HNR......: {hnr_score} dB')
-        except Exception as e:
-            bt.logging.error(f"Failed to calculate HNR: {e}")
+        except:
+            pass
+            bt.logging.error(f"Failed to calculate SNR")
 
-        # Calculate Consistency score
         try:
             consistency_score = self.metric_evaluator.calculate_consistency(file_path, text)
-            bt.logging.info(f'.......Consistency Score......: {consistency_score}')
-        except Exception as e:
-            bt.logging.error(f"Failed to calculate Consistency score: {e}")
-
-        # Ensure that scores are valid before normalizing and calculating aggregate scores
-        if snr_score is None or hnr_score is None or consistency_score is None:
-            bt.logging.error("One or more scores could not be calculated, returning 0 as aggregate score")
-            return 0  # Return 0 as the aggregate score if any metric could not be calculated
+            bt.logging.info(f'....... Consistency Score ......: {consistency_score}')
+        except:
+            pass
+            bt.logging.error(f"Failed to calculate Consistency score")
 
         # Normalize scores and calculate aggregate score
         normalized_snr = self.normalizer.normalize_quality(snr_score)
         normalized_hnr = self.normalizer.normalize_quality(hnr_score)
         normalized_consistency = self.normalizer.normalize_consistency(consistency_score)
 
-        bt.logging.info(f'Normalized Metrics: SNR = {normalized_snr}dB, HNR = {normalized_hnr}dB, Consistency = {normalized_consistency}')
-        
+        bt.logging.info(f'Normalized Metrics: SNR = {normalized_snr}dB, Normalized Metrics: HNR = {normalized_hnr}dB, Consistency = {normalized_consistency}')
         aggregate_quality = self.aggregator.geometric_mean({'snr': normalized_snr, 'hnr': normalized_hnr})
-        aggregate_score = (
-            self.aggregator.geometric_mean({'quality': aggregate_quality, 'normalized_consistency': normalized_consistency})
-            if consistency_score and consistency_score > 0.2
-            else 0
-        )
-        
+        aggregate_score = self.aggregator.geometric_mean({'quality': aggregate_quality, 'normalized_consistency': normalized_consistency}) if consistency_score > 0.2 else 0
         bt.logging.info(f'....... Aggregate Score ......: {aggregate_score}')
         return aggregate_score
