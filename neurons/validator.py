@@ -166,7 +166,7 @@ async def setup_and_run(controller):
         # Start FastAPI with ngrok without blocking
         ngrok_tunnel, server_task = await controller.run_fastapi_with_ngrok(app)
         tasks.append(server_task)  # Keep track of the server task if you need to cancel it later
-            
+    
     # Start service-related tasks
     service_task = asyncio.create_task(controller.run_services())
     tasks.append(service_task)

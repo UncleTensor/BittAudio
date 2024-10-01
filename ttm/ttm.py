@@ -94,11 +94,7 @@ class MusicGenerationService(AIModelService):
         elif duration == 30:
             self.duration = 1510
             self.time_out = 200
-        print("--------------------------------------------------------")
-        print(f"Duration: {self.duration}")
-        print(f"filtered_axons: {filtered_axons}")
-        print(f"Prompt: {prompt}")
-        print("--------------------------------------------------------")
+
         """Queries the network with filtered axons and prompt."""
         responses = self.dendrite.query(
             filtered_axons,
@@ -252,6 +248,7 @@ class MusicGenerationService(AIModelService):
         queryable_uids = (self.metagraph.total_stake >= 0)
         # Remove the weights of miners that are not queryable.
         queryable_uids = torch.Tensor(queryable_uids) * torch.Tensor([self.metagraph.neurons[uid].axon_info.ip != '0.0.0.0' for uid in uids])
+
         active_miners = torch.sum(queryable_uids)
         dendrites_per_query = self.total_dendrites_per_query
 

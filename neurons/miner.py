@@ -50,7 +50,7 @@ def get_config():
     parser.add_argument("--music_path", default=None, help="Path to a custom finetuned model for Music Generation.")
 
     # Add Bittensor specific arguments
-    parser.add_argument("--netuid", type=int, default=50, help="The chain subnet uid.")
+    parser.add_argument("--netuid", type=int, default=16, help="The chain subnet uid.")
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)
     bt.wallet.add_args(parser)

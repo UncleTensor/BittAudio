@@ -46,9 +46,9 @@ with codecs.open(
     version_string = version_match.group(1)
 
 setup(
-    name="BittAudio",
+    name="ttm_bittensor_subnet",
     version=version_string,
-    description="BittAudio",
+    description="ttm_bittensor_subnet",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/UncleTensor/BittAudio.git",
