@@ -163,7 +163,8 @@ async def setup_and_run(controller):
     if os.path.exists(os.path.join(project_root, 'app')):
         secret_key = os.getenv("AUTH_SECRET_KEY")
         if not secret_key:
-            raise ValueError("Auth Secret key not found in environment variable AUTH_SECRET_KEY")
+            pass
+            # raise ValueError("Auth Secret key not found in environment variable AUTH_SECRET_KEY")
         app = create_app(secret_key)
         # Start FastAPI with ngrok without blocking
         ngrok_tunnel, server_task = await controller.run_fastapi_with_ngrok(app)
