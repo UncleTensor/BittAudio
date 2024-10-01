@@ -2,7 +2,7 @@
 Welcome to the Miner's guide for the Audio Generation Subnetwork within the Bittensor network. This document provides instructions for setting up and running a Miner node in the network.
 
 ## Overview
-Miners in the Audio Subnetwork are responsible for generating audio from text prompts received from Validators. Utilizing advanced text-to-speech models, miners aim to produce high-fidelity, natural-sounding voice recordings. The quality of the generated audio directly influences the rewards miners receive.
+Miners in the Audio Subnetwork are responsible for generating audio from text prompts received from Validators. Utilizing advanced text-to-music models, miners aim to produce high-fidelity, natural-sounding music. The quality of the generated audio directly influences the rewards miners receive.
 
 ## Installation
 Follow these steps to install the necessary components:
@@ -20,10 +20,10 @@ conda activate {conda-env}
 ```
 **Install Repo**
 ```bash
-git clone https://github.com/UncleTensor/AudioSubnet.git
-cd AudioSubnet
-pip install -e fseq/
+git clone https://github.com/UncleTensor/BittAudio.git
+cd BittAudio
 pip install -e .
+pip install -r requirements.txt
 wandb login
 ```
 **Install pm2**
@@ -49,57 +49,22 @@ sudo npm install pm2 -g
 ```bash
 python scripts/start_miner.py -- \
     --pm2_name {name} \
-    --netuid 16 \
+    --netuid 50 \
     --wallet.name {wallet_name} \
     --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --model {tts-model} \
+    --logging.trace \
     --music_model {ttm-model} \
-    --clone_model {vc-model} \
     --axon.port {machine_port}
 ```
 
 **Start with Auto update OFF**
 ```bash
 pm2 start neurons/miner.py -- \
-    --netuid 16 \
+    --netuid 50 \
     --wallet.name {wallet_name} \
     --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --model {tts-model} \
+    --logging.trace \
     --music_path {ttm-model} \
-    --clone_model {vc-model} \
-    --axon.port {machine_port}
-```
-For running VC bark/voiceclone:
-```bash
-python neurons/miner.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --clone_model bark/voiceclone \
-    --music_model facebook/musicgen-medium \
-    --model {model} \
-    --axon.port {machine_port}
-```
-**Using miner with ElevenLabs**
-
-For running VC ElevenLabs API:
-```bash
-echo "export ELEVEN_API={your_api_key_here}">>~/.bashrc && source ~/.bashrc
-```
-Export your API key to environment variable
-
-```bash
-python neurons/miner.py \
-    --netuid 16 \
-    --wallet.name {wallet_name} \
-    --wallet.hotkey {hotkey_name} \
-    --logging.debug \
-    --clone_model elevenlabs/eleven \
-    --music_model facebook/musicgen-medium \
-    --model elevenlabs/eleven \
     --axon.port {machine_port}
 ```
 
@@ -107,13 +72,8 @@ python neurons/miner.py \
 
 | **Category**                   | **Argument**                         | **Default Value**          | **Description**                                                                                                       |
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| **Text To Speech Model**    | `--model`                            | 'elevenlabs/eleven' ; 'facebook/mms-tts-eng' ; 'suno/bark' ; 'MeloTTS'   | The model to use for text-to-speech.|
 | **Text To Music Model** | `--music_model`                           | 'facebook/musicgen-medium' ; 'facebook/musicgen-large'       | The model to use for Text-To-Music |
-| **Voice Clone Model** | `--clone_model`                           | 'bark/voiceclone' ; 'elevenlabs/eleven'       | The model to use for Voice Clone |
 | **Music Finetuned Model** | `--music_path`                           | /path/to/model | The model to use for Text-To-Music |
-| **Voice Clone Finetuned Model** | `--bark_vc_path`                           | /path/to/model | The bark Finetuned model to use for Voice Clone |
-| **Facebook TTS Finetuned Model**    | `--fb_model_path`                        | /path/to/model | The Finetuned Facebook tts model to be used for text-to-speech. |
-| **Bark TTS Finetuned Model**    | `--bark_model_path`                        |  /path/to/model | The Finetuned Bark tts model to be used for text-to-speech. |
 | **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.|
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.|

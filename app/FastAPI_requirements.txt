@@ -1,0 +1,33 @@
+alembic==1.13.1
+annotated-types==0.6.0
+bcrypt==3.2.0
+cryptography==42.0.2
+databases==0.8.0
+email-validator==2.1.0.post1
+fastapi==0.115.0
+httpcore==1.0.2
+httptools==0.6.1
+httpx==0.26.0
+passlib==1.7.4
+psycopg2-binary==2.9.9
+pydantic==2.5.3
+pydantic-core==2.14.6
+pydantic-extra-types==2.4.0
+pydantic-settings==2.1.0
+PyJWT==2.8.0
+pyngrok==7.1.2
+PySocks==1.7.1
+python-dotenv==1.0.0
+python-jose==3.3.0
+python-multipart==0.0.6
+PyYAML==6.0.1
+requests==2.31.0
+requests-toolbelt==1.0.0
+SQLAlchemy==1.4.51            #updated with 2.0.35
+starlette==0.35.1
+slowapi== 0.1.9
+ujson==5.9.0
+urllib3==2.1.0
+uvicorn==0.26.0
+watchfiles==0.21.0
+websockets==12.0
