@@ -99,7 +99,7 @@ class MusicGenerationService(AIModelService):
         responses = self.dendrite.query(
             filtered_axons,
             MusicGeneration(text_input=prompt, duration=self.duration),
-            deserialize=True,
+            deserialize=False,
             timeout=200,
         )
         return responses
