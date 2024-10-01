@@ -18,37 +18,37 @@ matplotlib==3.4.3
 
 # ------------------------------------------ #
 
-alembic
-annotated-types
-bcrypt
-cryptography
-databases
-email-validator
-fastapi
-httpcore
-httptools
-httpx
-passlib
-psycopg2-binary
-pydantic
-pydantic-core
-pydantic-extra-types
-pydantic-settings
-PyJWT
-pyngrok
-PySocks
-python-dotenv
-python-jose
-python-multipart
-PyYAML
-requests
-requests-toolbelt
-SQLAlchemy          #updated with 2.0.35
-starlette
-# slowapi== 0.1.9
-ujson
-urllib3
-uvicorn
-watchfiles
-websockets
-ngrok
+# alembic
+# annotated-types
+# bcrypt
+# cryptography
+# databases
+# email-validator
+# fastapi
+# httpcore
+# httptools
+# httpx
+# passlib
+# psycopg2-binary
+# pydantic
+# pydantic-core
+# pydantic-extra-types
+# pydantic-settings
+# PyJWT
+# pyngrok
+# PySocks
+# python-dotenv
+# python-jose
+# python-multipart
+# PyYAML
+# requests
+# requests-toolbelt
+# SQLAlchemy          #updated with 2.0.35
+# starlette
+# # slowapi== 0.1.9
+# ujson
+# urllib3
+# uvicorn
+# watchfiles
+# websockets
+# ngrok
