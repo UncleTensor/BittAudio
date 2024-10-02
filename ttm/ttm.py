@@ -48,6 +48,9 @@ class MusicGenerationService(AIModelService):
             try:
                 await self.main_loop_logic(step)
                 step += 1
+                if step % 100 == 0:
+                    self.metagraph.sync(subtensor=self.subtensor)
+                    bt.logging.info(f"🔄 Syncing metagraph with subtensor.")
             except KeyboardInterrupt:
                 print("Keyboard interrupt detected. Exiting MusicGenerationService.")
                 break
