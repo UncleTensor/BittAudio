@@ -1,4 +1,4 @@
-# BittAudio (SN 16) | Audio Generation Subnet on Bittensor
+# BittAudio (SN 50) | Audio Generation Subnet on Bittensor
 ![bitaudio](docs/bittaudio.jpg)
 The main goal of the BittAudio is to establish a decentralized platform that incentivizes the creation, distribution and also monetization of AI audio content, such as:
 - Text-to-Music (TTM) <br>

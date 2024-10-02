@@ -74,14 +74,14 @@ pm2 start neurons/miner.py -- \
 |---------------------------------|--------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------|
 | **Text To Music Model** | `--music_model`                           | 'facebook/musicgen-medium' ; 'facebook/musicgen-large'       | The model to use for Text-To-Music |
 | **Music Finetuned Model** | `--music_path`                           | /path/to/model | The model to use for Text-To-Music |
-| **Network UID** | `--netuid`                           |  Mainnet: 16        | The chain subnet UID. |
+| **Network UID** | `--netuid`                           |  Mainnet: 50        | The chain subnet UID. |
 | **Bittensor Subtensor Arguments** | `--subtensor.chain_endpoint`        | -                          | Endpoint for Bittensor chain connection.|
 |                                 | `--subtensor.network`                | -                          | Bittensor network endpoint.|
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.|
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.|
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.|
 | **Bittensor Axon Arguments**    | `--axon.port`                        | -                          | Port number for the axon server.|
-| **PM2 process name**    | `--pm2_name`                        | 'SN16Miner'                          | Name for the pm2 process for Auto Update. |
+| **PM2 process name**    | `--pm2_name`                        | 'SN50Miner'                          | Name for the pm2 process for Auto Update. |
 
 
 

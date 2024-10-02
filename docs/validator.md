@@ -28,9 +28,9 @@ conda activate {conda-env}
 ```bash
 git clone https://github.com/UncleTensor/BittAudio.git
 cd BittAudio
-pip install git+https://github.com/facebookresearch/audiocraft.git
 pip install -e .
-pip install -r requirements.txt
+pip install git+https://github.com/facebookresearch/audiocraft.git
+pip install laion_clap==1.1.4
 wandb login
 ```
 **Install pm2**
@@ -68,7 +68,7 @@ change the default arguements from `lib/default_args.py`
 | **Bittensor Logging Arguments** | `--logging.debug`                    | -                          | Enable debugging logs.                                                                                               |
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
-| **PM2 process name**    | `--pm2_name`                        | 'SN16Miner'                          | Name for the pm2 process for Auto Update. |
+| **PM2 process name**    | `--pm2_name`                        | 'SN50Miner'                          | Name for the pm2 process for Auto Update. |
 
 ### License
 Refer to the main README for the MIT License details.
