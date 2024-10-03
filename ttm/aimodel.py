@@ -10,11 +10,13 @@ import sys
 import os
 import re
 from lib.default_args import default_args as args
+from lib import __spec_version__ as spec_version
+
 
 class AIModelService:
     _scores = None
     _base_initialized = False  # Class-level flag for one-time initialization
-    version: int = 1  # Adjust version as necessary
+    version: int = spec_version  # Adjust version as necessary
 
     def __init__(self):
         self.config = self.get_config()
@@ -45,7 +47,7 @@ class AIModelService:
         parser.add_argument("--alpha", default=0.75, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
         parser.add_argument("--subtensor.network", type=str, default=args['subtensor_network'], help="The logging directory.")
-        parser.add_argument("--netuid", default=args['netuid'], type=int, help="The chain subnet uid.")
+        parser.add_argument("--netuid", default=50, type=int, help="The chain subnet uid.")
         parser.add_argument("--wallet.name", type=str, default=args['wallet_name'], help="The wallet name.")
         parser.add_argument("--wallet.hotkey", type=str, default=args['wallet_hotkey'], help="The wallet hotkey.")
 
