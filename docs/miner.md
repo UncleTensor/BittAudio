@@ -37,11 +37,6 @@ sudo npm install pm2 -g
 ### Running a Miner
  - To operate a miner, run the miner.py script with the necessary configuration.
 
-### Starting with Auto Update script
- - To start the miner with auto-update, run the start_miner.py script with the required command-line arguments.
- - The script will automatically update the miner with the latest version.
- - [Note: the miner will have to run this auto-update script in a screen session]
-
 ### Miner Commands
 ```bash
 pm2 start neurons/miner.py -- \
