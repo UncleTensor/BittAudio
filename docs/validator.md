@@ -26,12 +26,10 @@ conda activate {conda-env}
 ```
 **Install Repo**
 ```bash
+pip install audiocraft
 git clone https://github.com/UncleTensor/BittAudio.git
 cd BittAudio
-pip install -e .
-pip install git+https://github.com/facebookresearch/audiocraft.git
-pip install laion_clap==1.1.4
-wandb login
+pip install -e 
 ```
 **Install pm2**
 ```bash
@@ -41,11 +39,6 @@ sudo npm install pm2 -g
 
 ## Running a Validator
 - To operate a validator, run the validator.py script with the required command-line arguments.
-
-## Starting with Auto Update script
- - To start the validator with auto-update, run the start_valid.py script with the required command-line arguments.
- - The script will automatically update the validator with the latest version.
- - [Note: the validator will have to run this auto-update script in a screen session]
 
 ## Validator Command
 ```bash
