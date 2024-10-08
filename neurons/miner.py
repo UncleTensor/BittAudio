@@ -1,12 +1,12 @@
 import os
 import sys
+import lib
 import time
 import torch
 import typing
 import argparse
 import traceback
 import torchaudio
-import numpy as np
 import bittensor as bt
 import ttm.protocol as protocol
 # from ttm.protocol import MusicGeneration
@@ -106,11 +106,16 @@ def main(config):
 
     ######################## Text to Music Processing ########################
 
-    # The blacklist function decides if a request should be ignored.
     def music_blacklist_fn(synapse: protocol.MusicGeneration) -> typing.Tuple[bool, str]:
         if synapse.dendrite.hotkey not in metagraph.hotkeys:
             bt.logging.trace(f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}")
             return True, "Unrecognized hotkey"
+        elif synapse.dendrite.hotkey in metagraph.hotkeys and metagraph.S[metagraph.hotkeys.index(synapse.dendrite.hotkey)] < lib.MIN_STAKE:
+            # Ignore requests from entities with low stake.
+            bt.logging.trace(
+                f"Blacklisting hotkey {synapse.dendrite.hotkey} with low stake"
+            )
+            return True, "Low stake"
         else:
             return False, "Accepted"
 
@@ -135,7 +140,7 @@ def main(config):
             bt.logging.error(f"Error converting file: {e}")
 
     def ProcessMusic(synapse: protocol.MusicGeneration) -> protocol.MusicGeneration:
-        bt.logging.info(f"Generating music with model: {config.music_model}")
+        bt.logging.info(f"Generating music with model: {config.music_path if config.music_path else config.music_model}")
         print(f"synapse.text_input: {synapse.text_input}")
         print(f"synapse.duration: {synapse.duration}")
         music = ttm_models.generate_music(synapse.text_input, synapse.duration)

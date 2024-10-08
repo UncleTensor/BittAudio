@@ -1,3 +1,4 @@
+from lib.hashing import load_hashes_to_cache, check_duplicate_music, save_hash_to_file
 from ttm.ttm_score import MusicQualityEvaluator
 from ttm.protocol import MusicGeneration
 from ttm.aimodel import AIModelService
@@ -8,6 +9,8 @@ import torchaudio
 import contextlib
 import traceback
 import asyncio
+import hashlib
+from datetime import datetime
 import random
 import torch
 import wandb
@@ -28,14 +31,17 @@ class MusicGenerationService(AIModelService):
         super().__init__()  
         self.load_prompts()
         self.total_dendrites_per_query = 10
-        self.minimum_dendrites_per_query = 3  # Minimum dendrites per query
+        self.minimum_dendrites_per_query = 3
         self.current_block = self.subtensor.block
         self.last_updated_block = self.current_block - (self.current_block % 100)
         self.last_reset_weights_block = self.current_block
         self.filtered_axon = []
         self.combinations = []
-        self.duration = None  # 755 tokens = 15 seconds music
+        self.duration = None
         self.lock = asyncio.Lock()
+
+        # Load hashes from file to cache at startup
+        load_hashes_to_cache()        
 
     def load_prompts(self):
         gs_dev = load_dataset("etechgrid/prompts_for_TTM")
@@ -149,11 +155,9 @@ class MusicGenerationService(AIModelService):
             bt.logging.error(f'An error occurred while handling speech output: {e}')
 
     def handle_music_output(self, axon, music_output, prompt, model_name):
-        token = 0
         try:
             # Convert the list to a tensor
             speech_tensor = torch.Tensor(music_output)
-            
             # Normalize the speech data
             audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
 
@@ -170,31 +174,47 @@ class MusicGenerationService(AIModelService):
             torchaudio.save(output_path, src=audio_data_int, sample_rate=sampling_rate)
             bt.logging.info(f"Saved audio file to {output_path}")
 
-            try:
-                uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                wandb.log({f"TTM prompt: {prompt[:100]} ....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
-                bt.logging.success(f"TTM Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and UID {uid_in_metagraph}")
-            except Exception as e:
-                bt.logging.error(f"Error uploading TTM audio file to wandb: {e}")
+            # Calculate the audio hash
+            audio_hash = hashlib.sha256(audio_data.numpy().tobytes()).hexdigest()
 
-            # Calculate the duration
-            duration = self.get_duration(output_path)
-            token = duration * 50.2
-            bt.logging.info(f"The duration of the audio file is {duration} seconds.")
-            # Score the output and update the weights
-            score = self.score_output(output_path, prompt)
-            bt.logging.info(f"Score output after analysing the output file: {score}")
-            try:
-                if duration < 15:
-                    score = self.score_adjustment(score, duration)
-                    bt.logging.info(f"Score updated based on short duration than the required by the client: {score}")
-                else:
-                    bt.logging.info(f"Duration is greater than 15 seconds. No need to penalize the score.")
-            except Exception as e:
-                bt.logging.error(f"Error in penalizing the score: {e}")
-            bt.logging.info(f"Aggregated Score from Smoothness, SNR and Consistancy Metric: {score}")
-            self.update_score(axon, score, service="Text-To-Music")
-            return output_path
+            # Check if the music hash is a duplicate
+            if check_duplicate_music(audio_hash):
+                # Log the duplicate detection and punish the miner
+                bt.logging.info(f"Duplicate music detected from miner: {axon.hotkey}. Issuing punishment.")
+                self.punish(axon, service="Text-To-Music", punish_message="Duplicate music detected")
+            else:
+                # No duplicate detected, save the hash and process the music
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                save_hash_to_file(audio_hash, axon.hotkey, timestamp)
+                bt.logging.info(f"Music hash processed and saved successfully for miner: {axon.hotkey}")
+
+                try:
+                    uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
+                    wandb.log({f"TTM prompt: {prompt[:100]} ....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
+                    bt.logging.success(f"TTM Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and UID {uid_in_metagraph}")
+                except Exception as e:
+                    bt.logging.error(f"Error uploading TTM audio file to wandb: {e}")
+
+                # Calculate the duration
+                duration = self.get_duration(output_path)
+                token = duration * 50.2
+                bt.logging.info(f"The duration of the audio file is {duration} seconds.")
+                # Score the output and update the weights
+                score = self.score_output(output_path, prompt)
+                bt.logging.info(f"Score output after analysing the output file: {score}")
+                
+                try:
+                    if duration < 15:
+                        score = self.score_adjustment(score, duration)
+                        bt.logging.info(f"Score updated based on short duration than the required by the client: {score}")
+                    else:
+                        bt.logging.info(f"Duration is greater than 15 seconds. No need to penalize the score.")
+                except Exception as e:
+                    bt.logging.error(f"Error in penalizing the score: {e}")
+                
+                bt.logging.info(f"Aggregated Score from Smoothness, SNR and Consistancy Metric: {score}")
+                self.update_score(axon, score, service="Text-To-Music")
+                return output_path
 
         except Exception as e:
             bt.logging.error(f"Error processing Music output: {e}")

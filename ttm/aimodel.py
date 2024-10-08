@@ -78,7 +78,7 @@ class AIModelService:
         })
 
         # Filter and sort the DataFrame
-        df = df[df['STAKE'] < 20000]
+        df = df[df['STAKE'] < 500]
         df = df.sort_values(by=["EMISSION"], ascending=False)
         uid = df.iloc[0]['UID']
         axon_info = df.iloc[0]['AXON']
