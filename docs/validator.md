@@ -29,7 +29,9 @@ conda activate {conda-env}
 pip install audiocraft
 git clone https://github.com/UncleTensor/BittAudio.git
 cd BittAudio
-pip install -e 
+pip install -e
+pip install laion_clap==1.1.4
+wandb login
 ```
 **Install pm2**
 ```bash
