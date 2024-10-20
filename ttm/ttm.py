@@ -3,14 +3,16 @@ from ttm.ttm_score import MusicQualityEvaluator
 from ttm.protocol import MusicGeneration
 from ttm.aimodel import AIModelService
 from datasets import load_dataset
+from datetime import datetime
+from tabulate import tabulate
 import bittensor as bt
+import soundfile as sf
 import numpy as np
 import torchaudio
 import contextlib
 import traceback
 import asyncio
 import hashlib
-from datetime import datetime
 import random
 import torch
 import wandb
@@ -18,6 +20,7 @@ import wave
 import lib
 import sys
 import os
+import re
 
 
 # Set the project root path
@@ -25,7 +28,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 audio_subnet_path = os.path.abspath(project_root)
 sys.path.insert(0, project_root)
 sys.path.insert(0, audio_subnet_path)
-
+refrence_dir = "audio_files"  # Directory to save the audio files
 class MusicGenerationService(AIModelService):
     def __init__(self):
         super().__init__()  
@@ -39,15 +42,72 @@ class MusicGenerationService(AIModelService):
         self.combinations = []
         self.duration = None
         self.lock = asyncio.Lock()
-
+        self.audio_path = None
         # Load hashes from file to cache at startup
         load_hashes_to_cache()        
 
     def load_prompts(self):
-        gs_dev = load_dataset("etechgrid/prompts_for_TTM")
-        self.prompts = gs_dev['train']['text']
-        return self.prompts
+        # Load the dataset (you can change this to any other dataset name)
+        dataset = load_dataset("etechgrid/ttm-validation-dataset", split="train")  # Adjust the split if needed (train, test, etc.)
+        random_index = random.randint(0, len(dataset) - 1)
+        self.random_sample = dataset[random_index]
+        # Checking if the prompt exists in the dataset
+        if 'Prompts' in self.random_sample:
+            prompt = self.random_sample['Prompts']
+            bt.logging.info(f"Returning the prompt: {prompt}")
+        else:
+            print("'Prompt' not found in the sample.")
+            return None  # Return None if no prompt found
 
+        # Check if audio data exists and save it
+        if 'File_Path' in self.random_sample and isinstance(self.random_sample['File_Path'], dict):
+            file_path = self.random_sample['File_Path']
+            if 'array' in file_path and 'sampling_rate' in file_path:
+                audio_array = file_path['array']
+                sample_rate = file_path['sampling_rate']
+
+                # Save the audio to a file
+                os.makedirs(refrence_dir, exist_ok=True)  # Create output directory if it doesn't exist
+                audio_path = os.path.join(refrence_dir, "random_sample.wav")
+                
+                try:
+                    # Save the audio data using soundfile
+                    sf.write(audio_path, audio_array, sample_rate)
+                    bt.logging.info(f"Audio saved successfully at: {audio_path}")
+                    self.audio_path = audio_path
+                
+                    # Read the audio file into a numerical array
+                    audio_data, sample_rate = sf.read(self.audio_path)
+                    
+                    # Convert the numerical array to a tensor
+                    speech_tensor = torch.Tensor(audio_data)
+                    
+                    # Normalize the speech data
+                    audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
+                    audio_hash = hashlib.sha256(audio_data.numpy().tobytes()).hexdigest()
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    # Check if the music hash is a duplicate
+                    if check_duplicate_music(audio_hash):
+                        bt.logging.info(f"Duplicate music detected from Validator. skipping hash.")
+                    else:
+                        try:
+                            save_hash_to_file(audio_hash, timestamp)
+                            bt.logging.info(f"Music hash processed and saved successfully for Validator")
+                        except Exception as e:
+                            bt.logging.error(f"Error saving audio hash: {e}")
+                
+                except Exception as e:
+                    bt.logging.error(f"Error saving audio file: {e}")
+            else:
+                print("Invalid audio data in 'File_Path'. Expected 'array' and 'sampling_rate'.")
+                return None
+        else:
+            print("'File_Path' not found or invalid format in the sample.")
+            return None
+        
+        return prompt  # Return the prompt after saving the audio file
+
+    
     async def run_async(self):
         step = 0
         while True:
@@ -70,12 +130,14 @@ class MusicGenerationService(AIModelService):
             # Load prompt from the dataset using the load_prompts function
             bt.logging.info(f"Using prompt from HuggingFace Dataset for Text-To-Music at Step: {step}")
             g_prompt = self.load_prompts()
-            g_prompt = random.choice(g_prompt)  # Choose a random prompt
-            g_prompt = self.convert_numeric_values(g_prompt)
+            
+            if isinstance(g_prompt, str):
+                g_prompt = self.convert_numeric_values(g_prompt)
+
             # Ensure prompt length does not exceed 256 characters
-            while len(g_prompt) > 256:
+            while isinstance(g_prompt, str) and len(g_prompt) > 256:
                 bt.logging.error(f'The length of current Prompt is greater than 256. Skipping current prompt.')
-                g_prompt = random.choice(g_prompt)
+                g_prompt = self.load_prompts()  # Reload another prompt
                 g_prompt = self.convert_numeric_values(g_prompt)
 
             # Get filtered axons and query the network
@@ -155,69 +217,116 @@ class MusicGenerationService(AIModelService):
             bt.logging.error(f'An error occurred while handling speech output: {e}')
 
     def handle_music_output(self, axon, music_output, prompt, model_name):
+        # Handle the music output received from the miners
         try:
             # Convert the list to a tensor
             speech_tensor = torch.Tensor(music_output)
+            bt.logging.info("Converted music output to tensor successfully.")
+        except Exception as e:
+            bt.logging.error(f"Error converting music output to tensor: {e}")
+            return
+        
+        try:
             # Normalize the speech data
             audio_data = speech_tensor / torch.max(torch.abs(speech_tensor))
-
+            bt.logging.info("Normalized the audio data.")
+        except Exception as e:
+            bt.logging.error(f"Error normalizing audio data: {e}")
+            return
+        
+        try:
             # Convert to 32-bit PCM
             audio_data_int_ = (audio_data * 2147483647).type(torch.IntTensor)
-
+            bt.logging.info("Converted audio data to 32-bit PCM.")
+        
             # Add an extra dimension to make it a 2D tensor
             audio_data_int = audio_data_int_.unsqueeze(0)
+            bt.logging.info("Added an extra dimension to audio data.")
+        except Exception as e:
+            bt.logging.error(f"Error converting audio data to 32-bit PCM: {e}")
+            return
 
+        try:
+            # Get the .wav file from the path
+            file_name = os.path.basename(self.audio_path)
+            bt.logging.info(f"Saving audio file to: {file_name}")
+        
             # Save the audio data as a .wav file
-            # After saving the audio file
-            output_path = os.path.join('/tmp', f'output_music_{axon.hotkey}.wav')
+            output_path = os.path.join('/tmp/music/', file_name)
             sampling_rate = 32000
             torchaudio.save(output_path, src=audio_data_int, sample_rate=sampling_rate)
             bt.logging.info(f"Saved audio file to {output_path}")
+        except Exception as e:
+            bt.logging.error(f"Error saving audio file: {e}")
+            return
 
+        try:
             # Calculate the audio hash
             audio_hash = hashlib.sha256(audio_data.numpy().tobytes()).hexdigest()
-
+            bt.logging.info("Calculated audio hash.")
+        except Exception as e:
+            bt.logging.error(f"Error calculating audio hash: {e}")
+            return
+        
+        try:
             # Check if the music hash is a duplicate
             if check_duplicate_music(audio_hash):
-                # Log the duplicate detection and punish the miner
                 bt.logging.info(f"Duplicate music detected from miner: {axon.hotkey}. Issuing punishment.")
                 self.punish(axon, service="Text-To-Music", punish_message="Duplicate music detected")
             else:
-                # No duplicate detected, save the hash and process the music
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 save_hash_to_file(audio_hash, axon.hotkey, timestamp)
                 bt.logging.info(f"Music hash processed and saved successfully for miner: {axon.hotkey}")
-
-                try:
-                    uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
-                    wandb.log({f"TTM prompt: {prompt[:100]} ....": wandb.Audio(np.array(audio_data_int_), caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)})
-                    bt.logging.success(f"TTM Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and UID {uid_in_metagraph}")
-                except Exception as e:
-                    bt.logging.error(f"Error uploading TTM audio file to wandb: {e}")
-
-                # Calculate the duration
-                duration = self.get_duration(output_path)
-                token = duration * 50.2
-                bt.logging.info(f"The duration of the audio file is {duration} seconds.")
-                # Score the output and update the weights
-                score = self.score_output(output_path, prompt)
-                bt.logging.info(f"Score output after analysing the output file: {score}")
-                
-                try:
-                    if duration < 15:
-                        score = self.score_adjustment(score, duration)
-                        bt.logging.info(f"Score updated based on short duration than the required by the client: {score}")
-                    else:
-                        bt.logging.info(f"Duration is greater than 15 seconds. No need to penalize the score.")
-                except Exception as e:
-                    bt.logging.error(f"Error in penalizing the score: {e}")
-                
-                bt.logging.info(f"Aggregated Score from Smoothness, SNR and Consistancy Metric: {score}")
-                self.update_score(axon, score, service="Text-To-Music")
-                return output_path
-
         except Exception as e:
-            bt.logging.error(f"Error processing Music output: {e}")
+            bt.logging.error(f"Error checking or saving music hash: {e}")
+            return
+        
+        try:
+            # Log the audio to wandb
+            uid_in_metagraph = self.metagraph.hotkeys.index(axon.hotkey)
+            audio_data_np = np.array(audio_data_int_)
+            wandb.log({
+                f"TTM prompt: {prompt[:100]} ....": wandb.Audio(audio_data_np, caption=f'For HotKey: {axon.hotkey[:10]} and uid {uid_in_metagraph}', sample_rate=sampling_rate)
+            })
+            bt.logging.success(f"TTM Audio file uploaded to wandb successfully for Hotkey {axon.hotkey} and UID {uid_in_metagraph}")
+        except Exception as e:
+            bt.logging.error(f"Error uploading TTM audio file to wandb: {e}")
+        
+        try:
+            # Get audio duration
+            duration = self.get_duration(output_path)
+            token = duration * 50.2
+            bt.logging.info(f"The duration of the audio file is {duration} seconds.")
+        except Exception as e:
+            bt.logging.error(f"Error calculating audio duration: {e}")
+            return
+
+        try:
+            refrence_dir = self.audio_path
+            score, table1, table2 = self.score_output("/tmp/music/", refrence_dir, prompt)
+            if duration < 15:
+                score = self.score_adjustment(score, duration)
+                bt.logging.info(f"Score updated based on short duration than required: {score}")
+            else:
+                bt.logging.info(f"Duration is greater than 15 seconds. No need to penalize the score.")
+        except Exception as e:
+            bt.logging.error(f"Error scoring the output: {e}")
+            return
+
+        try:
+            current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            tabulated_str = tabulate(table1, headers=[f"Raw score for hotkey:{axon.hotkey}", current_datetime], tablefmt="grid")
+            print(tabulated_str)
+            print("\n")
+            tabulated_str2 = tabulate(table2, headers=[f"Normalized score for hotkey:{axon.hotkey}", current_datetime], tablefmt="grid")
+            print(tabulated_str2)
+            bt.logging.info(f"Aggregated Score for hotkey {axon.hotkey}: {score}")
+            self.update_score(axon, score, service="Text-To-Music")
+        except Exception as e:
+            bt.logging.error(f"Error generating score tables or updating score: {e}")
+            return
+        
+        return output_path
 
 
     def get_duration(self, wav_file_path):
@@ -241,14 +350,15 @@ class MusicGenerationService(AIModelService):
                 return score * multiplier
         return score
 
-    def score_output(self, output_path, prompt):
+    def score_output(self, output_path, refrence_dir , prompt):
         """Evaluates and returns the score for the generated music output."""
         try:
             score_object = MusicQualityEvaluator()
-            return score_object.evaluate_music_quality(output_path, prompt)
+            return score_object.evaluate_music_quality(output_path, refrence_dir, prompt)
         except Exception as e:
             bt.logging.error(f"Error scoring output: {e}")
             return 0.0
+
 
     def get_filtered_axons_from_combinations(self):
         if not self.combinations:
@@ -265,6 +375,7 @@ class MusicGenerationService(AIModelService):
             filtered_axons = [self.metagraph.axons[i] for i in current_combination]
 
         return filtered_axons
+    
 
     def get_filtered_axons(self):
         # Get the uids of all miners in the network.
@@ -372,4 +483,3 @@ class MusicGenerationService(AIModelService):
                 bt.logging.error(f"Failed to set weights: {msg}")
         except Exception as e:
             bt.logging.error(f"An error occurred while setting weights: {e}")
-

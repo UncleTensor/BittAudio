@@ -21,7 +21,7 @@ def load_hashes_to_cache():
             for entry in data:
                 cache.add(entry['hash'])  # Add hash to in-memory cache
 
-def save_hash_to_file(hash_value: str, miner_id: str, timestamp: str):
+def save_hash_to_file(hash_value: str, timestamp: str,  miner_id: str = None):
     """Save the new hash to the JSON file and in-memory cache."""
     cache.add(hash_value)  # Add to cache for fast lookups
     if os.path.exists(hashes_file):
@@ -34,6 +34,7 @@ def save_hash_to_file(hash_value: str, miner_id: str, timestamp: str):
         # If the file doesn't exist, create it with the initial hash entry
         with open(hashes_file, 'w') as file:
             json.dump([{'hash': hash_value, 'miner_id': miner_id, 'timestamp': timestamp}], file)
+            
 
 def check_duplicate_music(hash_value: str) -> bool:
     """Check if the given hash already exists in the in-memory cache."""

@@ -8,11 +8,6 @@ Validators initiate the audio generation process by providing prompts to the Min
 ## Installation
 Follow these steps to install the necessary components:
 
-**Export Corcel API key**
-```bash
-echo "export CORCEL_API_KEY=XXXXXXXXXXXXXXX">>~/.bashrc && source ~/.bashrc
-```
-
 **Set Conda Enviornment**
 ```bash
 mkdir -p ~/miniconda3
@@ -20,17 +15,23 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~/miniconda3/miniconda.sh
 ~/miniconda3/bin/conda init bash
+bash
 ~/miniconda3/bin/conda init zsh
 conda create -n {conda-env} python=3.10 -y
 conda activate {conda-env}
 ```
 **Install Repo**
 ```bash
+sudo apt update
+sudo apt install build-essential -y
+git clone https://github.com/IamHussain503/NewMusic.git
+cd NewMusic
+pip install -e.
 pip install audiocraft
-git clone https://github.com/UncleTensor/BittAudio.git
-cd BittAudio
-pip install -e
 pip install laion_clap==1.1.4
+pip install git+https://github.com/haoheliu/audioldm_eval
+pip install git+https://github.com/kkoutini/passt_hear21@0.0.19#egg=hear21passt
+sudo mkdir -p /tmp/music
 wandb login
 ```
 **Install pm2**
@@ -64,6 +65,15 @@ change the default arguements from `lib/default_args.py`
 | **Bittensor Wallet Arguments**  | `--wallet.name`                      | -                          | Name of the wallet.                                                                                                  |
 |                                 | `--wallet.hotkey`                    | -                  | Hotkey path for the wallet.                                                                                          |
 | **PM2 process name**    | `--pm2_name`                        | 'SN50Miner'                          | Name for the pm2 process for Auto Update. |
+
+## Miners logs in Validator
+
+If it is required to check miners logs in the validator, one can go ahead to ~/.pm2/logs directory and grep the miners scoring logs
+as follows:
+
+sudo grep -a -A 10 "Raw score for hotkey:5DXTGaAQm99AEAvhMRqWQ77b1aob4mAXwX" ~/.pm2/logs/validator-out.log
+
+sudo grep -a -A 10 "Normalized score for hotkey:5DXTGaAQm99AEAvhMRqWQ77b1aob4mAXwX" ~/.pm2/logs/validator-out.log
 
 ### License
 Refer to the main README for the MIT License details.

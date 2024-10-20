@@ -150,9 +150,9 @@ def main(config):
             return None
         try:
             sampling_rate = 32000
-            write_wav("musicgen_out.wav", rate=sampling_rate, data=music)
-            bt.logging.success("Music generated and saved to musicgen_out.wav")
-            music_tensor = convert_music_to_tensor("musicgen_out.wav")
+            write_wav("random_sample.wav", rate=sampling_rate, data=music)
+            bt.logging.success("Music generated and saved to random_sample.wav")
+            music_tensor = convert_music_to_tensor("random_sample.wav")
             synapse.music_output = music_tensor
             return synapse
         except Exception as e:
