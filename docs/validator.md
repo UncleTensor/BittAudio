@@ -40,18 +40,15 @@ sudo apt install nodejs npm
 sudo npm install pm2 -g
 ```
 
-## Running a Validator
-- To operate a validator, run the validator.py script with the required command-line arguments.
-
-## Validator Command
+## Validator Command for Auto Update
 ```bash
-python neurons/validator.py 
+pm2 start scripts/start_valid.py -- \
+    --pm2_name {name} \
+    --netuid 50 \
+    --wallet.name {wallet_name} \
+    --wallet.hotkey {hotkey_name} \
+    --subtensor.network {finney}
 ```
-```bash
-pm2 start neurons/validator.py
-```
-
-change the default arguements from `lib/default_args.py`
 
 ### Bittensor Validator Script Arguments:
 

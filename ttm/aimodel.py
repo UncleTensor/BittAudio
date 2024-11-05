@@ -9,7 +9,6 @@ import GPUtil
 import sys
 import os
 import re
-from lib.default_args import default_args as args
 from lib import __spec_version__ as spec_version
 
 
@@ -46,11 +45,11 @@ class AIModelService:
 
         parser.add_argument("--alpha", default=0.1, type=float, help="The weight moving average scoring.")
         parser.add_argument("--custom", default="my_custom_value", help="Adds a custom value to the parser.")
-        parser.add_argument("--subtensor.network", type=str, default=args['subtensor_network'], help="The logging directory.")
+        parser.add_argument("--subtensor.network", type=str,  help="The logging directory.")
         parser.add_argument("--netuid", default=50, type=int, help="The chain subnet uid.")
-        parser.add_argument("--wallet.name", type=str, default=args['wallet_name'], help="The wallet name.")
-        parser.add_argument("--wallet.hotkey", type=str, default=args['wallet_hotkey'], help="The wallet hotkey.")
-
+        parser.add_argument("--wallet.name", type=str, help="The wallet name.")
+        parser.add_argument("--wallet.hotkey", type=str, help="The wallet hotkey.")
+        
         # Add Bittensor specific arguments
         bt.subtensor.add_args(parser)
         bt.logging.add_args(parser)
@@ -197,7 +196,7 @@ class AIModelService:
             uid_index = next(index for index, ax in zipped_uids if ax == axon)
 
             alpha = self.config.alpha
-            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.1)
+            self.scores[uid_index] = alpha * self.scores[uid_index] + (1 - alpha) * (-0.0075)
             self.scores[uid_index] = max(self.scores[uid_index], 0)  # Ensure scores don't go below 0
             bt.logging.info(f"Punished Hotkey {axon.hotkey} using {service}: {self.scores[uid_index]}")
         except Exception as e:
