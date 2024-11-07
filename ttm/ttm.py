@@ -426,10 +426,6 @@ class MusicGenerationService(AIModelService):
                 "Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
 
-        # Update weights for scores greater than 0 with random values between 0.3 and 0.7
-        random_weights = torch.empty_like(weights).uniform_(0.3, 0.7)
-        weights = torch.where(weights > 0, random_weights, weights)
-
         # Normalize scores to get raw weights
         raw_weights = torch.nn.functional.normalize(weights, p=1, dim=0)
         bt.logging.info("raw_weights", raw_weights)
